@@ -5,10 +5,11 @@ import { PortfolioSummaryCard } from '@/components/dashboard/PortfolioSummaryCar
 import { AllocationDonut } from '@/components/dashboard/AllocationDonut';
 import { StatusChips } from '@/components/dashboard/StatusChips';
 import { ConcentrationCard } from '@/components/dashboard/ConcentrationCard';
+import { HealthScoreCard } from '@/components/dashboard/HealthScoreCard';
 import { TrendingUp, Shield, Lightbulb, Scale } from 'lucide-react';
 
 export default function Index() {
-  const { isDataLoaded } = usePortfolio();
+  const { isDataLoaded, summary } = usePortfolio();
 
   if (!isDataLoaded) {
     return (
@@ -74,8 +75,13 @@ export default function Index() {
       {/* Main Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Summary - Full Width on Mobile */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-2">
           <PortfolioSummaryCard />
+        </div>
+
+        {/* Health Score */}
+        <div>
+          {summary && <HealthScoreCard score={summary.healthScore} />}
         </div>
 
         {/* Allocation Donut */}

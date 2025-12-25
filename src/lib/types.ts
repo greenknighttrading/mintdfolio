@@ -38,6 +38,7 @@ export interface PortfolioSummary {
   holdingsInProfitCount: number;
   holdingsInProfitPercent: number;
   totalHoldings: number;
+  healthScore: number; // 0-100 score
 }
 
 export interface AllocationBreakdown {
@@ -72,11 +73,12 @@ export interface ProfitMilestone {
 
 export interface Insight {
   id: string;
-  type: 'profit' | 'concentration' | 'rebalance' | 'patience' | 'allocation';
+  type: 'profit' | 'concentration' | 'rebalance' | 'patience' | 'allocation' | 'loss';
   priority: 'high' | 'medium' | 'low';
   message: string;
   timestamp: Date;
   dismissed: boolean;
+  relatedItemIds?: string[]; // IDs of items that triggered this insight
 }
 
 export interface RebalanceSuggestion {
