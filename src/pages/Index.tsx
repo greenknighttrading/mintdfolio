@@ -74,7 +74,7 @@ export default function Index() {
       </div>
 
       {/* Main Grid */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4">
         {/* Summary - Full Width on Mobile */}
         <div className="lg:col-span-2">
           <PortfolioSummaryCard />
