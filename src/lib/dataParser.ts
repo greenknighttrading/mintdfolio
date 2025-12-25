@@ -325,18 +325,22 @@ export function processPortfolioData(
         }
 
         // Calculate derived fields
-        // Treat incoming values as either per-unit or totals based on header text.
+        // Determine if values are per-unit or totals based on header text.
+        // Default assumption: Market Price is per-unit, Average Cost Paid is per-unit
+        // Only treat as "total" if header explicitly says "total"
         const marketHeader = String(columnMap.marketPrice ?? '').toLowerCase();
         const costHeader = String(columnMap.averageCostPaid ?? '').toLowerCase();
 
-        const marketLooksPerUnit = /\b(each|unit|per)\b/.test(marketHeader);
+        const marketLooksTotal = /\btotal\b/.test(marketHeader);
         const costLooksTotal = /\btotal\b/.test(costHeader);
 
-        const totalMarketValue = marketLooksPerUnit ? quantity * marketPrice : marketPrice;
-        const unitMarketPrice = quantity > 0 ? totalMarketValue / quantity : 0;
+        // Market price: default to per-unit (multiply by quantity) unless header says "total"
+        const totalMarketValue = marketLooksTotal ? marketPrice : quantity * marketPrice;
+        const unitMarketPrice = quantity > 0 ? totalMarketValue / quantity : marketPrice;
 
+        // Cost basis: default to per-unit (multiply by quantity) unless header says "total"
         const totalCostBasis = costLooksTotal ? averageCostPaid : quantity * averageCostPaid;
-        const unitCostBasis = quantity > 0 ? totalCostBasis / quantity : 0;
+        const unitCostBasis = quantity > 0 ? totalCostBasis / quantity : averageCostPaid;
 
         const profitDollars = totalMarketValue - totalCostBasis;
         const gainPercent = totalCostBasis > 0 ? ((totalMarketValue - totalCostBasis) / totalCostBasis) * 100 : 0;

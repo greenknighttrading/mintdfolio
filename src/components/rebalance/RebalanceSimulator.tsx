@@ -201,22 +201,28 @@ export function RebalanceSimulator() {
                 <AlertCircle className="w-4 h-4 text-destructive" />
               )}
             </div>
-            {!isValidTotal && (
+            {isCustomMode && !isValidTotal && (
               <span className="text-xs text-destructive">
                 Must equal 100% ({pendingTotal > 100 ? `-${pendingTotal - 100}%` : `+${100 - pendingTotal}%`})
               </span>
             )}
           </div>
           
-          <Button
-            onClick={handleApplyCustomAllocation}
-            disabled={!isValidTotal || !hasUnappliedChanges}
-            className="w-full"
-            variant={hasUnappliedChanges && isValidTotal ? "default" : "secondary"}
-          >
-            {hasUnappliedChanges && isValidTotal ? "Apply Custom Allocation" : 
-             !isValidTotal ? "Allocation must equal 100%" : "Custom Allocation Applied"}
-          </Button>
+          {isCustomMode ? (
+            <Button
+              onClick={handleApplyCustomAllocation}
+              disabled={!isValidTotal || !hasUnappliedChanges}
+              className="w-full"
+              variant={hasUnappliedChanges && isValidTotal ? "default" : "secondary"}
+            >
+              {hasUnappliedChanges && isValidTotal ? "Apply Custom Allocation" : 
+               !isValidTotal ? "Allocation must equal 100%" : "Custom Allocation Applied"}
+            </Button>
+          ) : (
+            <div className="w-full px-4 py-3 rounded-lg bg-secondary/50 text-center">
+              <span className="text-sm text-muted-foreground">Using default allocation</span>
+            </div>
+          )}
         </div>
       </div>
 
