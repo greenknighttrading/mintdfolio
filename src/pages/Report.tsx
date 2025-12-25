@@ -63,11 +63,164 @@ export default function Report() {
     }
   };
 
+  const getNarrativeContent = () => {
+    const sealed = allocation?.sealed.percent || 0;
+    const slabs = allocation?.slabs.percent || 0;
+    const raw = allocation?.rawCards.percent || 0;
+    const healthScore = summary?.healthScore || 0;
+    const totalGainPercent = summary?.unrealizedPLPercent || 0;
+    const topHits = milestones.filter(m => m.item.gainPercent >= 100);
+    
+    // Collector type narrative
+    let collectorNarrative = '';
+    if (sealed >= 50) {
+      collectorNarrative = `When I say "Vault Keeper," I don't mean passive. I mean <em>intentional</em>.<br><br>
+A heavy sealed allocation tells me you understand something most people don't: time is the real multiplier in Pokémon. You're not chasing week-to-week price action. You're betting on scarcity, nostalgia, and the fact that Pokémon has a 25-year history of rewarding patience.<br><br>
+You're the type of collector who can look at an ETB or a premium collection and already see it as future vintage — not because it's guaranteed, but because you're comfortable holding through boredom, sideways movement, and market noise.<br><br>
+That mindset is a strength. But it also comes with trade-offs — and we'll talk about those honestly in this report.`;
+    } else if (slabs >= 50) {
+      collectorNarrative = `Trophy Hunters don't collect — they <em>curate</em>.<br><br>
+Your slab-heavy portfolio tells me you value authenticated excellence over quantity. Every graded card in your collection represents a deliberate choice: the hunt, the evaluation, the commitment to quality.<br><br>
+This approach has real advantages. Graded cards offer liquidity, authenticity, and a clear market. You can exit positions faster than sealed holders, and you have proof of condition that raw collectors don't.<br><br>
+The trade-off? You're paying a premium for that security, and you may miss the explosive upside that comes from sealed appreciation. But that's a conscious choice — and this report will help you optimize around it.`;
+    } else if (raw >= 50) {
+      collectorNarrative = `Volume Players see what others miss.<br><br>
+Your raw-heavy portfolio tells me you're comfortable with uncertainty. You're hunting for mispriced cards, grading candidates, and opportunities that require a trained eye to spot.<br><br>
+This approach offers maximum flexibility. You can pivot quickly, capitalize on market inefficiencies, and your upside on any single card is theoretically unlimited if you grade the right one.<br><br>
+The risk? Raw cards carry condition uncertainty, and liquidity can be harder. But you already know that — and this report will help you manage those trade-offs.`;
+    } else {
+      collectorNarrative = `Balanced collectors often get underestimated — but I see it differently.<br><br>
+A diversified portfolio isn't boring. It's <em>resilient</em>. You've spread your conviction across sealed appreciation, graded security, and raw flexibility.<br><br>
+This means you can weather different market conditions. When sealed stagnates, your graded cards provide liquidity. When raw prices spike, you're positioned to benefit. You're not betting everything on one thesis.<br><br>
+The trade-off is that you may not capture the full upside of any single category. But for most collectors, that's the right call — and this report will help you fine-tune your balance.`;
+    }
+
+    // Overview narrative
+    const overviewNarrative = totalGainPercent >= 0 
+      ? `At a glance, this portfolio is doing its job.<br><br>
+A ${totalGainPercent >= 10 ? 'strong ' : ''}${totalGainPercent.toFixed(1)}% unrealized return tells me two things at once:<br><br>
+<strong>1.</strong> You're positioned correctly long-term.<br>
+<strong>2.</strong> You're not overexposed to hype-driven, short-term spikes.<br><br>
+That's a good thing — even if it doesn't feel exciting.<br><br>
+The total value reflects real conviction capital, not flipping capital. This isn't money that needs to move tomorrow, and that gives you leverage most collectors don't have.`
+      : `Let's be honest: seeing red isn't fun.<br><br>
+A ${Math.abs(totalGainPercent).toFixed(1)}% unrealized loss tells me you're in drawdown territory. But here's what matters more than the number: <em>why</em> you're down and <em>what</em> you're holding.<br><br>
+If your positions are fundamentally sound — sealed products from recent sets, quality graded cards, undervalued raw gems — then this drawdown is temporary. Markets don't move in straight lines.<br><br>
+The question isn't whether you're down. It's whether your thesis is still intact. And this report will help you evaluate that.`;
+
+    // Health score narrative
+    let healthNarrative = '';
+    if (healthScore >= 80) {
+      healthNarrative = `A score of ${healthScore} tells me this portfolio is <em>well-constructed</em>.<br><br>
+You have strong allocation balance, reasonable liquidity, controlled concentration, and disciplined profit-taking. This is the profile of a collector who thinks like an investor.`;
+    } else if (healthScore >= 60) {
+      healthNarrative = `A ${healthScore} tells me this: You have strong conviction and solid positioning — but the portfolio is tilted, not optimized.<br><br>
+And that's not inherently bad.<br><br>
+The score isn't punishing you for believing in your strategy. It's simply reflecting that high-conviction portfolios trade balance for upside.<br><br>
+If your thesis plays out, this score will rise naturally. If the market stagnates, the current tilt becomes the drag.`;
+    } else {
+      healthNarrative = `A ${healthScore} tells me there's work to do — but it's not a crisis.<br><br>
+Lower health scores typically mean one of a few things: heavy concentration in one category, limited liquidity, or positions that have drawn down significantly.<br><br>
+The good news? These are all addressable. This report will give you specific steps to improve your score without abandoning your core thesis.`;
+    }
+
+    // Allocation narrative
+    let allocationNarrative = '';
+    if (sealed >= 70) {
+      allocationNarrative = `On paper, this allocation doesn't look balanced.<br><br>
+${sealed.toFixed(0)}% sealed is aggressive — no sugarcoating that.<br><br>
+But balance isn't about symmetry. It's about <em>alignment with intent</em>.<br><br>
+This portfolio is balanced for a high-conviction sealed strategy because:<br>
+<strong>•</strong> Your sealed exposure is spread across multiple products, not one bet<br>
+<strong>•</strong> You still maintain graded and raw exposure for liquidity and flexibility<br>
+<strong>•</strong> You're not relying on sealed to fund short-term expenses<br><br>
+In other words: This isn't reckless concentration — it's <em>deliberate</em> concentration.<br><br>
+That said, there's a difference between conviction and fragility, and that's where the next sections matter.`;
+    } else if (slabs >= 70) {
+      allocationNarrative = `A ${slabs.toFixed(0)}% graded allocation is a strong statement.<br><br>
+You've prioritized authenticated, liquid assets over long-term sealed plays or speculative raw cards. That's a defensive posture — and there's nothing wrong with that.<br><br>
+The upside: you can exit positions quickly if needed. The downside: you may be paying a premium for that security, and sealed products often outperform over multi-year horizons.<br><br>
+This allocation makes sense if you value flexibility over maximum upside. Let's make sure the rest of your portfolio supports that goal.`;
+    } else {
+      allocationNarrative = `Your current mix of ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% graded, and ${raw.toFixed(0)}% raw reflects a balanced approach.<br><br>
+You're not betting everything on one category, which means you can weather different market conditions. Sealed gives you long-term upside, graded provides liquidity and authenticity, and raw offers flexibility.<br><br>
+The trade-off is that you won't capture the full explosive upside if one category massively outperforms. But for most collectors, this balanced approach is the smarter play.`;
+    }
+
+    // Top performers narrative
+    const topPerformersNarrative = topHits.length > 0 
+      ? `A 100%+ gain isn't a victory lap — it's a <em>decision point</em>.<br><br>
+Big winners are dangerous, not because they're bad, but because they trick you into thinking "I don't need a plan anymore."<br><br>
+Historically, this is where disciplined collectors do one of three things:<br><br>
+<strong>1.</strong> Sell half to lock in original capital<br>
+<strong>2.</strong> Rotate profits into underweighted categories (graded or raw)<br>
+<strong>3.</strong> Hold intentionally because the item has structural scarcity<br><br>
+The key word is <em>intentional</em>.<br><br>
+If you're holding, you should be able to explain why — not just hope it goes higher.`
+      : `You don't have any 100%+ gainers yet — and that's okay.<br><br>
+Patience is the name of the game in Pokémon collecting. Most successful portfolios took years to show their best returns.<br><br>
+The key is to stay positioned in fundamentally sound products and let time do the work.`;
+
+    // Strengths narrative
+    const strengthsNarrative = `The biggest strength here isn't performance — it's <em>restraint</em>.<br><br>
+You haven't panic-sold drawdowns. You haven't over-rotated into whatever's trending. You've stayed consistent.<br><br>
+That matters more than timing.<br><br>
+Any underweights aren't failures — they're opportunities. You already did the hard part by building conviction capital.`;
+
+    // Risks narrative
+    const risksNarrative = `There are three real risks in this portfolio — and none of them are about Pokémon collapsing.<br><br>
+<strong>Risk #1: Liquidity Compression</strong><br>
+${sealed >= 50 ? 'Sealed performs best over long timelines, but it\'s slower to exit. If you ever need liquidity quickly, you\'ll feel that friction.' : 'Your current mix has reasonable liquidity, but keep an eye on how quickly you could exit if needed.'}<br><br>
+<strong>Risk #2: Opportunity Cost</strong><br>
+${sealed >= 60 ? `Being ${sealed.toFixed(0)}%+ sealed means you may miss tactical opportunities in graded or raw cards when markets misprice them.` : 'Your diversified approach minimizes this risk, but stay alert to opportunities across all categories.'}<br><br>
+<strong>Risk #3: Emotional Over-Attachment</strong><br>
+High-conviction portfolios can make it harder to trim winners objectively — especially items you love.<br><br>
+None of these invalidate the strategy. They just require awareness.`;
+
+    // Action plan narrative
+    const actionNarrative = `If this were my portfolio, I wouldn't rush.<br><br>
+I'd rebalance slowly and intentionally, using strength — not fear.<br><br>
+That might look like:<br><br>
+<strong>•</strong> Trimming 5–10% of overweighted categories only from oversized winners<br>
+<strong>•</strong> Redirecting that capital into underweighted positions<br>
+<strong>•</strong> Building liquidity gradually, not all at once<br><br>
+The goal isn't to abandon your thesis. It's to let your winners <em>fund flexibility</em>.`;
+
+    // Rebalancing narrative
+    const rebalanceNarrative = `If you moved closer to your target allocation over time:<br><br>
+<strong>•</strong> Your health score improves (less concentration risk)<br>
+<strong>•</strong> Your liquidity increases<br>
+<strong>•</strong> Your downside becomes more manageable in flat markets<br><br>
+The trade-off? You may slightly cap upside if one category outperforms everything else.<br><br>
+That's the deal. There's no free lunch — only intentional trade-offs.`;
+
+    // Closing narrative
+    const closingNarrative = `This is a strong portfolio.<br><br>
+Not because it's perfect — but because it's <em>honest</em>.<br><br>
+You know what you believe in. You're not chasing noise. And you're already ahead of most collectors just by having a framework.<br><br>
+The next level isn't changing your thesis.<br><br>
+It's <em>refining execution</em>.`;
+
+    return {
+      collectorNarrative,
+      overviewNarrative,
+      healthNarrative,
+      allocationNarrative,
+      topPerformersNarrative,
+      strengthsNarrative,
+      risksNarrative,
+      actionNarrative,
+      rebalanceNarrative,
+      closingNarrative
+    };
+  };
+
   const generateReportContent = () => {
     const collectorProfile = getCollectorType();
     const topHits = milestones.slice(0, 5);
     const strengthInsights = insights.filter(i => i.priority === 'low');
     const riskInsights = insights.filter(i => i.priority === 'high' || i.priority === 'medium');
+    const narratives = getNarrativeContent();
     
     const totalGain = summary?.unrealizedPL || 0;
     const totalGainPercent = summary?.unrealizedPLPercent || 0;
@@ -149,6 +302,35 @@ export default function Report() {
       height: 24px;
       background: linear-gradient(180deg, #a78bfa, #818cf8);
       border-radius: 2px;
+    }
+    
+    .narrative-block {
+      background: rgba(15, 23, 42, 0.4);
+      border-left: 3px solid rgba(139, 92, 246, 0.5);
+      border-radius: 0 10px 10px 0;
+      padding: 20px 24px;
+      margin-top: 24px;
+      font-size: 15px;
+      line-height: 1.8;
+      color: #cbd5e1;
+    }
+    
+    .narrative-block em {
+      color: #a78bfa;
+      font-style: italic;
+    }
+    
+    .narrative-block strong {
+      color: #fff;
+    }
+    
+    .narrative-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #8b5cf6;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
     }
     
     .collector-profile {
@@ -350,11 +532,27 @@ export default function Report() {
       margin: 16px 0;
     }
     
+    .closing-section {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(129, 140, 248, 0.1));
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      text-align: center;
+      padding: 40px 32px;
+    }
+    
+    .closing-section .section-title {
+      justify-content: center;
+    }
+    
+    .closing-section .section-title::before {
+      display: none;
+    }
+    
     @media print {
       body { background: #fff; color: #1e293b; }
       .section { border: 1px solid #e2e8f0; }
       .stat-card { background: #f8fafc; }
       .section-title { color: #6366f1; }
+      .narrative-block { background: #f8fafc; color: #475569; }
     }
   </style>
 </head>
@@ -370,6 +568,14 @@ export default function Report() {
     <div class="collector-profile">
       <div class="collector-type">${collectorProfile.type}</div>
       <p class="collector-desc">${collectorProfile.description}</p>
+    </div>
+    
+    <!-- What This Says About You -->
+    <div class="section">
+      <h2 class="section-title">What This Actually Says About You</h2>
+      <div class="narrative-block">
+        ${narratives.collectorNarrative}
+      </div>
     </div>
     
     <!-- Portfolio Overview -->
@@ -390,9 +596,30 @@ export default function Report() {
         </div>
       </div>
       
+      <div class="narrative-block">
+        <div class="narrative-title">How I'm Reading These Numbers</div>
+        ${narratives.overviewNarrative}
+      </div>
+    </div>
+    
+    <!-- Health Score -->
+    <div class="section">
+      <h2 class="section-title">Portfolio Health Score</h2>
       <div style="text-align: center;">
-        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 8px;">Portfolio Health Score</p>
         <div class="health-score">${healthScore}</div>
+        <p style="color: #94a3b8; font-size: 14px;">out of 100</p>
+      </div>
+      
+      <div class="narrative-block">
+        <div class="narrative-title">How the Health Score Is Calculated — and Why It's Fair</div>
+        <p style="margin-bottom: 16px;">The health score isn't about how much money you've made. It's about how resilient your portfolio is if the market does absolutely nothing for the next 12–24 months.</p>
+        <p style="margin-bottom: 16px;"><strong>Here's what's being weighed:</strong><br>
+        • Allocation balance – how far you are from your stated targets<br>
+        • Liquidity mix – how easily positions can be exited if needed<br>
+        • Concentration risk – how much of the portfolio is exposed to one thesis<br>
+        • Drawdown exposure – how many positions are deep red<br>
+        • Profit discipline – whether large winners are being managed intentionally</p>
+        ${narratives.healthNarrative}
       </div>
     </div>
     
@@ -414,6 +641,11 @@ export default function Report() {
         <p style="font-size: 14px; color: #94a3b8;">Your current strategy: <strong style="color: #fff;">${allocationPreset.charAt(0).toUpperCase() + allocationPreset.slice(1)}</strong></p>
         <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Target: ${allocationTarget.sealed}% Sealed / ${allocationTarget.slabs}% Graded / ${allocationTarget.rawCards}% Raw</p>
       </div>
+      
+      <div class="narrative-block">
+        <div class="narrative-title">Why This Allocation — and What It Really Means</div>
+        ${narratives.allocationNarrative}
+      </div>
     </div>
     
     <!-- Top Hits -->
@@ -426,6 +658,11 @@ export default function Report() {
           <span class="hit-gain">+${hit.milestone}%+</span>
         </div>
       `).join('')}
+      
+      <div class="narrative-block">
+        <div class="narrative-title">What to Do With Big Winners (This Is Where Most People Mess Up)</div>
+        ${narratives.topPerformersNarrative}
+      </div>
     </div>
     ` : ''}
     
@@ -440,6 +677,11 @@ export default function Report() {
       `).join('') : `
         <p style="color: #94a3b8; text-align: center; padding: 20px;">Your portfolio shows solid fundamentals with good diversification across categories.</p>
       `}
+      
+      <div class="narrative-block">
+        <div class="narrative-title">What You're Actually Doing Well</div>
+        ${narratives.strengthsNarrative}
+      </div>
     </div>
     
     <!-- Risks & Considerations -->
@@ -453,38 +695,37 @@ export default function Report() {
       `).join('') : `
         <p style="color: #94a3b8; text-align: center; padding: 20px;">No significant risks detected. Your portfolio appears well-balanced.</p>
       `}
+      
+      <div class="narrative-block">
+        <div class="narrative-title">Let's Be Honest About the Risks</div>
+        ${narratives.risksNarrative}
+      </div>
     </div>
     
     <!-- Action Plan -->
     <div class="section">
       <h2 class="section-title">Your Action Plan</h2>
       ${generateActionPlan()}
+      
+      <div class="narrative-block">
+        <div class="narrative-title">How I'd Actually Execute This (Not Theoretical)</div>
+        ${narratives.actionNarrative}
+      </div>
     </div>
     
-    <!-- Alternative Strategies -->
+    <!-- Rebalancing Considerations -->
     <div class="section">
-      <h2 class="section-title">Other Paths to Consider</h2>
-      <p style="color: #94a3b8; margin-bottom: 16px;">Based on your portfolio, here are alternative collecting strategies you might explore:</p>
-      
-      <div class="action-item">
-        <div class="action-content">
-          <div class="action-title">The Sealed Strategy</div>
-          <div class="action-desc">Focus 60%+ on sealed products for long-term appreciation. Best for patient collectors who can hold 3-5+ years.</div>
-        </div>
+      <h2 class="section-title">What Happens If You Rebalance?</h2>
+      <div class="narrative-block">
+        ${narratives.rebalanceNarrative}
       </div>
-      
-      <div class="action-item">
-        <div class="action-content">
-          <div class="action-title">The Grading Play</div>
-          <div class="action-desc">Shift toward graded cards for liquidity and authenticity. Ideal for those who want easier exit strategies.</div>
-        </div>
-      </div>
-      
-      <div class="action-item">
-        <div class="action-content">
-          <div class="action-title">The Raw Edge</div>
-          <div class="action-desc">Stay nimble with raw cards, capitalizing on market inefficiencies and quick flips. Higher risk, higher reward potential.</div>
-        </div>
+    </div>
+    
+    <!-- My Takeaway (Closing) -->
+    <div class="section closing-section">
+      <h2 class="section-title">My Takeaway</h2>
+      <div class="narrative-block" style="border-left: none; text-align: center; max-width: 600px; margin: 0 auto;">
+        ${narratives.closingNarrative}
       </div>
     </div>
     
