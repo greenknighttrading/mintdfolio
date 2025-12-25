@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ArrowRight, DollarSign, Calendar, Scale } from 'lucide-react';
 import { usePortfolio } from '@/contexts/PortfolioContext';
 import { cn } from '@/lib/utils';
-import { AllocationTarget, ALLOCATION_PRESETS, AllocationPreset } from '@/lib/types';
+import { AllocationTarget, ALLOCATION_PRESETS, ALLOCATION_PRESET_INFO, AllocationPreset } from '@/lib/types';
 import { Slider } from '@/components/ui/slider';
 
 const CONTRIBUTION_PRESETS = [250, 500, 1000, 2500];
@@ -109,10 +109,10 @@ export function RebalanceSimulator() {
     return maxMonths;
   }, [rebalanceAnalysis]);
 
-  const presets: { key: AllocationPreset; label: string; description: string }[] = [
-    { key: 'conservative', label: 'Conservative', description: '40/40/20' },
-    { key: 'balanced', label: 'Balanced', description: '50/30/20' },
-    { key: 'aggressive', label: 'Aggressive', description: '70/20/10' },
+  const presets: { key: AllocationPreset; label: string; description: string; emoji: string; title: string }[] = [
+    { key: 'conservative', label: 'Conservative', ...ALLOCATION_PRESET_INFO.conservative },
+    { key: 'balanced', label: 'Balanced', ...ALLOCATION_PRESET_INFO.balanced },
+    { key: 'aggressive', label: 'Aggressive', ...ALLOCATION_PRESET_INFO.aggressive },
   ];
 
   if (!allocation || !rebalanceAnalysis) return null;
@@ -133,18 +133,21 @@ export function RebalanceSimulator() {
                 setCustomAllocation(ALLOCATION_PRESETS[preset.key]);
               }}
               className={cn(
-                "px-4 py-3 rounded-xl transition-all duration-200 text-left",
+                "px-4 py-3 rounded-xl transition-all duration-200 text-left min-w-[140px]",
                 allocationPreset === preset.key
                   ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
                   : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               )}
             >
-              <p className="font-medium">{preset.label}</p>
+              <p className="font-medium flex items-center gap-2">
+                <span>{preset.emoji}</span>
+                {preset.label}
+              </p>
               <p className={cn(
                 "text-xs mt-0.5",
                 allocationPreset === preset.key ? "text-primary-foreground/80" : "text-muted-foreground"
               )}>
-                {preset.description}
+                {preset.title} • {preset.description}
               </p>
             </button>
           ))}

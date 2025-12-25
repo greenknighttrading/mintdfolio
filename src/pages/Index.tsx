@@ -6,6 +6,7 @@ import { AllocationDonut } from '@/components/dashboard/AllocationDonut';
 import { StatusChips } from '@/components/dashboard/StatusChips';
 import { ConcentrationCard } from '@/components/dashboard/ConcentrationCard';
 import { HealthScoreCard } from '@/components/dashboard/HealthScoreCard';
+import { StrengthsWeaknesses } from '@/components/dashboard/StrengthsWeaknesses';
 import { TrendingUp, Shield, Lightbulb, Scale } from 'lucide-react';
 
 export default function Index() {
@@ -92,6 +93,11 @@ export default function Index() {
         {/* Concentration Risk */}
         <div>
           <ConcentrationCard />
+        </div>
+
+        {/* Strengths & Weaknesses - Full Width */}
+        <div className="lg:col-span-3">
+          <StrengthsWeaknesses />
         </div>
       </div>
     </div>

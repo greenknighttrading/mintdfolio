@@ -20,7 +20,7 @@ interface AppLayoutProps {
 const navigation = [
   { name: 'Portfolio Health', href: '/', icon: LayoutDashboard },
   { name: 'Insight Feed', href: '/insights', icon: Lightbulb },
-  { name: 'Winners & Decisions', href: '/winners', icon: Trophy },
+  { name: 'Return Analysis', href: '/winners', icon: Trophy },
   { name: 'Rebalancing Simulator', href: '/rebalance', icon: Scale },
 ];
 
