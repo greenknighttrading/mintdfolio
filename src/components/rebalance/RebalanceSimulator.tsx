@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { ArrowRight, DollarSign, Calendar, Scale, Package, CreditCard, Layers } from 'lucide-react';
+import { ArrowRight, DollarSign, Calendar, Scale } from 'lucide-react';
 import { usePortfolio } from '@/contexts/PortfolioContext';
 import { cn } from '@/lib/utils';
-import { AllocationTarget, ALLOCATION_PRESETS, ALLOCATION_PRESET_INFO, AllocationPreset, PortfolioItem } from '@/lib/types';
+import { AllocationTarget, ALLOCATION_PRESETS, ALLOCATION_PRESET_INFO, AllocationPreset } from '@/lib/types';
 import { Slider } from '@/components/ui/slider';
 
 const CONTRIBUTION_PRESETS = [250, 500, 1000, 2500];
@@ -11,7 +11,7 @@ const TIMELINE_PRESETS = [3, 6, 12];
 type RebalanceMode = 'monthly-budget' | 'target-date';
 
 export function RebalanceSimulator() {
-  const { allocation, summary, items, allocationTarget, allocationPreset, setAllocationPreset, setCustomTarget } = usePortfolio();
+  const { allocation, summary, allocationTarget, allocationPreset, setAllocationPreset, setCustomTarget } = usePortfolio();
   const [customAllocation, setCustomAllocation] = useState<AllocationTarget>(allocationTarget);
   const [monthlyBudget, setMonthlyBudget] = useState(500);
   const [targetMonths, setTargetMonths] = useState(6);
@@ -108,38 +108,6 @@ export function RebalanceSimulator() {
     const maxMonths = Math.max(...rebalanceAnalysis.map(cat => cat.monthsNeeded));
     return maxMonths;
   }, [rebalanceAnalysis]);
-
-  // Generate product recommendations based on what needs to be bought
-  const recommendations = useMemo(() => {
-    if (!rebalanceAnalysis || !items.length) return { sealed: [], slabs: [], rawCards: [] };
-
-    // Get underweight categories
-    const underweightCategories = rebalanceAnalysis.filter(cat => cat.delta > 100);
-
-    // Group items by type
-    const sealedItems = items.filter(i => i.assetType === 'Sealed');
-    const slabItems = items.filter(i => i.assetType === 'Slab');
-    const rawItems = items.filter(i => i.assetType === 'Raw Card');
-
-    // Get top performing items from each category to recommend more of
-    const getTopPerformers = (categoryItems: PortfolioItem[], limit = 3) => {
-      return categoryItems
-        .filter(i => i.gainPercent > 0)
-        .sort((a, b) => b.gainPercent - a.gainPercent)
-        .slice(0, limit)
-        .map(item => ({
-          name: item.productName,
-          category: item.category,
-          gainPercent: item.gainPercent,
-        }));
-    };
-
-    return {
-      sealed: underweightCategories.some(c => c.key === 'sealed') ? getTopPerformers(sealedItems) : [],
-      slabs: underweightCategories.some(c => c.key === 'slabs') ? getTopPerformers(slabItems) : [],
-      rawCards: underweightCategories.some(c => c.key === 'rawCards') ? getTopPerformers(rawItems) : [],
-    };
-  }, [rebalanceAnalysis, items]);
 
   const presets: { key: AllocationPreset; label: string; description: string; title: string }[] = [
     { key: 'conservative', label: 'Conservative', ...ALLOCATION_PRESET_INFO.conservative },
@@ -466,74 +434,6 @@ export function RebalanceSimulator() {
         )}
       </div>
 
-      {/* Product Recommendations */}
-      {(recommendations.sealed.length > 0 || recommendations.slabs.length > 0 || recommendations.rawCards.length > 0) && (
-        <div className="glass-card p-6 animate-fade-in stagger-3" style={{ opacity: 0 }}>
-          <h2 className="text-lg font-semibold text-foreground mb-2">Recommended Purchases</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Based on your target allocation, consider adding more of these top performers:
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Sealed Recommendations */}
-            {recommendations.sealed.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Package className="w-4 h-4 text-primary" />
-                  Sealed Products
-                </div>
-                <div className="space-y-2">
-                  {recommendations.sealed.map((item, idx) => (
-                    <div key={idx} className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <p className="text-sm text-foreground line-clamp-2">{item.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{item.category}</p>
-                      <p className="text-xs text-primary font-medium mt-1">+{item.gainPercent.toFixed(1)}% return</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Slabs Recommendations */}
-            {recommendations.slabs.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <CreditCard className="w-4 h-4 text-primary" />
-                  Graded Cards
-                </div>
-                <div className="space-y-2">
-                  {recommendations.slabs.map((item, idx) => (
-                    <div key={idx} className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <p className="text-sm text-foreground line-clamp-2">{item.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{item.category}</p>
-                      <p className="text-xs text-primary font-medium mt-1">+{item.gainPercent.toFixed(1)}% return</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Raw Cards Recommendations */}
-            {recommendations.rawCards.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Layers className="w-4 h-4 text-primary" />
-                  Raw Cards
-                </div>
-                <div className="space-y-2">
-                  {recommendations.rawCards.map((item, idx) => (
-                    <div key={idx} className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <p className="text-sm text-foreground line-clamp-2">{item.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{item.category}</p>
-                      <p className="text-xs text-primary font-medium mt-1">+{item.gainPercent.toFixed(1)}% return</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

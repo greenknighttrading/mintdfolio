@@ -65,7 +65,7 @@ export default function Index() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Portfolio Health</h1>
+          <h1 className="text-2xl font-bold text-foreground">Portfolio Overview</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Overview of your collectible portfolio
           </p>
@@ -75,21 +75,21 @@ export default function Index() {
 
       {/* Main Grid */}
       <div className="grid lg:grid-cols-3 gap-4">
-        {/* Left Column (Summary + Allocation flush) */}
-        <div className="lg:col-span-2 flex flex-col gap-0">
+        {/* Left Column (Summary + Allocation + Strengths flush) */}
+        <div className="lg:col-span-2 flex flex-col">
           <PortfolioSummaryCard />
-          <AllocationDonut />
+          <div className="mt-4">
+            <AllocationDonut />
+          </div>
+          <div className="mt-0">
+            <StrengthsWeaknesses />
+          </div>
         </div>
 
         {/* Right Column */}
         <div className="flex flex-col gap-4">
           {summary && <HealthScoreCard score={summary.healthScore} />}
           <ConcentrationCard />
-        </div>
-
-        {/* Strengths & Weaknesses - Full Width */}
-        <div className="lg:col-span-3">
-          <StrengthsWeaknesses />
         </div>
       </div>
     </div>
