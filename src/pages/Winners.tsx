@@ -29,10 +29,10 @@ export default function Winners() {
           <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
             <Trophy className="w-5 h-5 text-success" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Winners & Decisions</h1>
+          <h1 className="text-2xl font-bold text-foreground">Return Analysis</h1>
         </div>
         <p className="text-muted-foreground">
-          Review your profitable positions and consider profit-taking strategies
+          Analyze performance, review returns, and evaluate profit-taking strategies
         </p>
       </div>
 
