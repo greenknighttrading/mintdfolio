@@ -22,6 +22,9 @@ export function calculatePortfolioSummary(items: PortfolioItem[]): PortfolioSumm
   const holdingsInProfitCount = holdingsInProfit.length;
   const holdingsInProfitPercent = items.length > 0 ? (holdingsInProfitCount / items.length) * 100 : 0;
 
+  // Calculate health score (0-100)
+  const healthScore = calculateHealthScore(items, holdingsInProfitPercent, unrealizedPLPercent);
+
   return {
     totalMarketValue,
     totalCostBasis,
@@ -30,7 +33,54 @@ export function calculatePortfolioSummary(items: PortfolioItem[]): PortfolioSumm
     holdingsInProfitCount,
     holdingsInProfitPercent,
     totalHoldings: items.length,
+    healthScore,
   };
+}
+
+/**
+ * Calculate portfolio health score (0-100)
+ * Factors: profit %, concentration, allocation balance, position diversity
+ */
+function calculateHealthScore(
+  items: PortfolioItem[],
+  holdingsInProfitPercent: number,
+  unrealizedPLPercent: number
+): number {
+  if (items.length === 0) return 0;
+
+  let score = 50; // Start at neutral
+
+  // Factor 1: Profit percentage (up to +20 points)
+  if (unrealizedPLPercent > 0) {
+    score += Math.min(20, unrealizedPLPercent / 5);
+  } else {
+    score += Math.max(-20, unrealizedPLPercent / 3);
+  }
+
+  // Factor 2: Holdings in profit ratio (up to +15 points)
+  score += (holdingsInProfitPercent / 100) * 15;
+
+  // Factor 3: Concentration penalty (up to -15 points)
+  const totalValue = items.reduce((sum, item) => sum + item.totalMarketValue, 0);
+  const sortedItems = [...items].sort((a, b) => b.totalMarketValue - a.totalMarketValue);
+  const top1Percent = totalValue > 0 ? (sortedItems[0]?.totalMarketValue || 0) / totalValue * 100 : 0;
+  if (top1Percent > 30) {
+    score -= 15;
+  } else if (top1Percent > 20) {
+    score -= 10;
+  } else if (top1Percent > 15) {
+    score -= 5;
+  }
+
+  // Factor 4: Diversification bonus (up to +10 points)
+  const uniqueCategories = new Set(items.map(item => item.category)).size;
+  score += Math.min(10, uniqueCategories * 2);
+
+  // Factor 5: Deep losses penalty (up to -10 points)
+  const deepLosses = items.filter(item => item.gainPercent < -30).length;
+  score -= Math.min(10, deepLosses * 2);
+
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 /**
@@ -232,6 +282,34 @@ export function generateInsights(
   const insights: Insight[] = [];
   const now = new Date();
 
+  // Deep loss insights (new)
+  const deepLosses = items.filter(item => item.gainPercent <= -30);
+  if (deepLosses.length > 0) {
+    insights.push({
+      id: `insight-${Date.now()}-loss`,
+      type: 'loss',
+      priority: 'high',
+      message: `${deepLosses.length} holding${deepLosses.length > 1 ? 's are' : ' is'} down 30% or more — consider whether these still align with your thesis or if tax-loss harvesting makes sense.`,
+      timestamp: now,
+      dismissed: false,
+      relatedItemIds: deepLosses.map(item => item.id),
+    });
+  }
+
+  // Moderate loss insights
+  const moderateLosses = items.filter(item => item.gainPercent <= -15 && item.gainPercent > -30);
+  if (moderateLosses.length >= 3) {
+    insights.push({
+      id: `insight-${Date.now()}-modloss`,
+      type: 'loss',
+      priority: 'medium',
+      message: `${moderateLosses.length} holdings are down 15-30% — monitor these positions for potential recovery or further decline.`,
+      timestamp: now,
+      dismissed: false,
+      relatedItemIds: moderateLosses.map(item => item.id),
+    });
+  }
+
   // Profit milestone insights
   if (milestones.length > 0) {
     const milestone500 = milestones.filter(m => m.milestone === 500);
@@ -246,6 +324,7 @@ export function generateInsights(
         message: `${milestone500.length} holding${milestone500.length > 1 ? 's have' : ' has'} exceeded 500% gains — historically an excellent point to consider locking in profits.`,
         timestamp: now,
         dismissed: false,
+        relatedItemIds: milestone500.map(m => m.item.id),
       });
     }
 
@@ -257,6 +336,7 @@ export function generateInsights(
         message: `${milestone300.length} holding${milestone300.length > 1 ? 's have' : ' has'} exceeded 300% gains — consider whether partial profit-taking aligns with your goals.`,
         timestamp: now,
         dismissed: false,
+        relatedItemIds: milestone300.map(m => m.item.id),
       });
     }
 
@@ -268,12 +348,14 @@ export function generateInsights(
         message: `${milestone200.length} holding${milestone200.length > 1 ? 's have' : ' has'} reached the 200% gain milestone — a good time to review your position.`,
         timestamp: now,
         dismissed: false,
+        relatedItemIds: milestone200.map(m => m.item.id),
       });
     }
   }
 
   // Concentration insights
   if (concentration.top1Percent > 20) {
+    const topItem = items.find(item => item.productName === concentration.top1Name);
     insights.push({
       id: `insight-${Date.now()}-conc1`,
       type: 'concentration',
@@ -281,10 +363,14 @@ export function generateInsights(
       message: `Your top position represents ${concentration.top1Percent.toFixed(1)}% of your portfolio — consider whether this concentration aligns with your risk tolerance.`,
       timestamp: now,
       dismissed: false,
+      relatedItemIds: topItem ? [topItem.id] : [],
     });
   }
 
   if (concentration.top3Percent > 40) {
+    const top3Items = items
+      .filter(item => concentration.top3Names.includes(item.productName))
+      .map(item => item.id);
     insights.push({
       id: `insight-${Date.now()}-conc3`,
       type: 'concentration',
@@ -292,6 +378,7 @@ export function generateInsights(
       message: `Your top 3 holdings represent ${concentration.top3Percent.toFixed(1)}% of portfolio value — diversification could reduce position-specific risk.`,
       timestamp: now,
       dismissed: false,
+      relatedItemIds: top3Items,
     });
   }
 
