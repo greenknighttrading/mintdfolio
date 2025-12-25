@@ -1,13 +1,18 @@
 import React, { useCallback, useState } from 'react';
-import { Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle2, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePortfolio } from '@/contexts/PortfolioContext';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function FileUpload() {
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const { uploadData, validation } = usePortfolio();
+  const { uploadData, validation, detectedColumns } = usePortfolio();
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.endsWith('.csv')) {
@@ -123,7 +128,7 @@ export function FileUpload() {
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {validation.errors.map((error, index) => (
                 <div
                   key={index}
@@ -133,6 +138,44 @@ export function FileUpload() {
                   <p className="text-sm text-destructive">{error}</p>
                 </div>
               ))}
+
+              {/* Show detected columns for debugging */}
+              {detectedColumns && detectedColumns.headers.length > 0 && (
+                <div className="p-4 rounded-xl bg-secondary/50 border border-border">
+                  <div className="flex items-center gap-2 mb-3">
+                    <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground">Column Detection</p>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <p className="text-muted-foreground">
+                      <span className="text-foreground font-medium">Your columns: </span>
+                      {detectedColumns.headers.join(', ')}
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-border">
+                      {Object.entries(detectedColumns.detected).map(([field, column]) => (
+                        <div key={field} className="flex items-center gap-2">
+                          <span className={cn(
+                            "w-2 h-2 rounded-full",
+                            column ? "bg-success" : "bg-destructive"
+                          )} />
+                          <span className="text-muted-foreground capitalize">
+                            {field.replace(/([A-Z])/g, ' $1').trim()}:
+                          </span>
+                          <span className={column ? "text-foreground" : "text-destructive"}>
+                            {column || 'Not found'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Check that your CSV has columns for Product Name, Quantity, and Market Price.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
