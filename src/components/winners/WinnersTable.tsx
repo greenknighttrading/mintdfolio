@@ -1,8 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowUpDown, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, ChevronUp, Filter, Info } from 'lucide-react';
 import { usePortfolio } from '@/contexts/PortfolioContext';
 import { cn } from '@/lib/utils';
 import type { PortfolioItem } from '@/lib/types';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 type SortField = 'gainPercent' | 'profitDollars' | 'totalMarketValue' | 'quantity' | 'cagr';
 type SortDirection = 'asc' | 'desc';
@@ -278,7 +284,23 @@ export function WinnersTable() {
         cell: (item) => <span className="tabular-nums text-foreground">{item.quantity}</span>,
       },
       sellHalf: {
-        header: 'Sell-Half Sim',
+        header: (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center gap-1 cursor-help">
+                  Sell-Half Sim
+                  <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs p-3">
+                <p className="text-sm">
+                  <strong>100%+ Gain Strategy:</strong> When a position has doubled (100%+ gain), selling half locks in your original investment while keeping the remaining units as "free" exposure.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ),
         align: 'left',
         cell: (item) => {
           const sellHalf = calculateSellHalf(item);
