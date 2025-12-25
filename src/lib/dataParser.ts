@@ -1,16 +1,50 @@
 import { RawPortfolioItem, PortfolioItem, ValidationResult } from './types';
 
-// Column name mappings for flexible CSV parsing
+// Column name mappings for flexible CSV parsing - expanded for Collectr variations
 const COLUMN_MAPPINGS: Record<string, string[]> = {
-  productName: ['product name', 'item name', 'name', 'product', 'item', 'title'],
-  category: ['category', 'set', 'series', 'collection', 'type'],
-  quantity: ['quantity', 'qty', 'count', 'amount', 'units'],
-  marketPrice: ['market price', 'market value', 'current price', 'price', 'value'],
-  averageCostPaid: ['average cost paid', 'avg cost', 'cost', 'purchase price', 'paid', 'cost basis'],
-  grade: ['grade', 'condition', 'grading', 'psa', 'bgs', 'cgc'],
-  cardNumber: ['card number', 'card #', 'card no', 'number', '#', 'card'],
-  dateAdded: ['date added', 'date', 'added', 'purchase date', 'acquired'],
+  productName: [
+    'product name', 'product', 'item name', 'item', 'name', 'title', 'description',
+    'card name', 'card', 'product title', 'item title'
+  ],
+  category: [
+    'category', 'set', 'set name', 'series', 'collection', 'type', 'product type',
+    'set/series', 'expansion', 'release'
+  ],
+  quantity: [
+    'quantity', 'qty', 'count', 'amount', 'units', 'total qty', 'total quantity',
+    '# owned', 'owned', 'holdings'
+  ],
+  marketPrice: [
+    'market price', 'market value', 'current price', 'price', 'value', 'current value',
+    'est. market value', 'estimated value', 'est value', 'est. value', 'market',
+    'current market value', 'current market price', 'unit price', 'unit value',
+    'fair market value', 'fmv', 'tcgplayer price', 'tcg price', 'low price',
+    'market price (each)', 'price each', 'each price'
+  ],
+  averageCostPaid: [
+    'average cost paid', 'avg cost', 'cost', 'purchase price', 'paid', 'cost basis',
+    'avg cost paid', 'average cost', 'cost paid', 'buy price', 'acquisition cost',
+    'total cost', 'cost each', 'unit cost', 'avg. cost', 'average price paid',
+    'purchase cost', 'bought for', 'bought at'
+  ],
+  grade: [
+    'grade', 'condition', 'grading', 'psa', 'bgs', 'cgc', 'sgc', 'graded',
+    'cert grade', 'grade/condition', 'psa grade', 'bgs grade', 'cgc grade'
+  ],
+  cardNumber: [
+    'card number', 'card #', 'card no', 'number', '#', 'card no.', 'collector number',
+    'set number', 'card num', 'no.', 'num', 'cert number', 'cert #', 'certification number'
+  ],
+  dateAdded: [
+    'date added', 'date', 'added', 'purchase date', 'acquired', 'acquisition date',
+    'add date', 'created', 'date created', 'date purchased', 'bought date'
+  ],
 };
+
+export interface ColumnMapping {
+  detected: Record<string, string | null>;
+  headers: string[];
+}
 
 /**
  * Sanitize a numeric string by removing currency symbols, commas, and whitespace
@@ -58,11 +92,13 @@ export function parseDate(value: string | undefined | null): Date | null {
 
 /**
  * Find the matching column name from CSV headers
+ * Uses partial matching for better flexibility
  */
 function findColumn(headers: string[], targetField: string): string | null {
   const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
   const mappings = COLUMN_MAPPINGS[targetField] || [];
 
+  // First try exact match
   for (const mapping of mappings) {
     const index = normalizedHeaders.indexOf(mapping.toLowerCase());
     if (index !== -1) {
@@ -70,7 +106,39 @@ function findColumn(headers: string[], targetField: string): string | null {
     }
   }
 
+  // Then try partial/contains match
+  for (const mapping of mappings) {
+    const mappingLower = mapping.toLowerCase();
+    const index = normalizedHeaders.findIndex(h => 
+      h.includes(mappingLower) || mappingLower.includes(h)
+    );
+    if (index !== -1) {
+      return headers[index];
+    }
+  }
+
   return null;
+}
+
+/**
+ * Detect column mappings from CSV headers
+ */
+export function detectColumnMappings(csvContent: string): ColumnMapping {
+  const { headers } = parseCSV(csvContent);
+  
+  return {
+    headers,
+    detected: {
+      productName: findColumn(headers, 'productName'),
+      category: findColumn(headers, 'category'),
+      quantity: findColumn(headers, 'quantity'),
+      marketPrice: findColumn(headers, 'marketPrice'),
+      averageCostPaid: findColumn(headers, 'averageCostPaid'),
+      grade: findColumn(headers, 'grade'),
+      cardNumber: findColumn(headers, 'cardNumber'),
+      dateAdded: findColumn(headers, 'dateAdded'),
+    }
+  };
 }
 
 /**
@@ -194,8 +262,9 @@ function parseCSVLine(line: string): string[] {
  * Process raw CSV data into validated portfolio items
  */
 export function processPortfolioData(
-  csvContent: string
-): { items: PortfolioItem[]; validation: ValidationResult } {
+  csvContent: string,
+  customMapping?: Record<string, string | null>
+): { items: PortfolioItem[]; validation: ValidationResult; detectedColumns: ColumnMapping } {
   const errors: string[] = [];
   const warnings: string[] = [];
   const items: PortfolioItem[] = [];
@@ -203,8 +272,8 @@ export function processPortfolioData(
   try {
     const { headers, rows } = parseCSV(csvContent);
 
-    // Find column mappings
-    const columnMap: Record<string, string | null> = {
+    // Find column mappings (use custom if provided)
+    const columnMap: Record<string, string | null> = customMapping || {
       productName: findColumn(headers, 'productName'),
       category: findColumn(headers, 'category'),
       quantity: findColumn(headers, 'quantity'),
@@ -215,19 +284,28 @@ export function processPortfolioData(
       dateAdded: findColumn(headers, 'dateAdded'),
     };
 
-    // Validate required columns
+    const detectedColumns: ColumnMapping = { headers, detected: columnMap };
+
+    // Log detected columns for debugging
+    console.log('CSV Headers found:', headers);
+    console.log('Column mappings:', columnMap);
+
+    // Validate required columns with helpful error messages
+    const missingColumns: string[] = [];
     if (!columnMap.productName) {
-      errors.push('Missing required column: Product Name');
+      missingColumns.push('Product Name');
     }
     if (!columnMap.quantity) {
-      errors.push('Missing required column: Quantity');
+      missingColumns.push('Quantity');
     }
     if (!columnMap.marketPrice) {
-      errors.push('Missing required column: Market Price');
+      missingColumns.push('Market Price');
     }
 
-    if (errors.length > 0) {
-      return { items: [], validation: { isValid: false, errors, warnings } };
+    if (missingColumns.length > 0) {
+      errors.push(`Missing required column(s): ${missingColumns.join(', ')}`);
+      errors.push(`Detected columns: ${headers.join(', ')}`);
+      return { items: [], validation: { isValid: false, errors, warnings }, detectedColumns };
     }
 
     // Process each row
@@ -308,9 +386,10 @@ export function processPortfolioData(
         errors,
         warnings,
       },
+      detectedColumns: { headers, detected: columnMap },
     };
   } catch (err) {
     errors.push(err instanceof Error ? err.message : 'Failed to parse CSV file');
-    return { items: [], validation: { isValid: false, errors, warnings } };
+    return { items: [], validation: { isValid: false, errors, warnings }, detectedColumns: { headers: [], detected: {} } };
   }
 }

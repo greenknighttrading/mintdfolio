@@ -11,7 +11,7 @@ import {
   AllocationPreset,
   ALLOCATION_PRESETS,
 } from '@/lib/types';
-import { processPortfolioData } from '@/lib/dataParser';
+import { processPortfolioData, ColumnMapping } from '@/lib/dataParser';
 import {
   calculatePortfolioSummary,
   calculateAllocationBreakdown,
@@ -24,6 +24,7 @@ interface PortfolioContextType {
   // Data
   items: PortfolioItem[];
   validation: ValidationResult | null;
+  detectedColumns: ColumnMapping | null;
   isDataLoaded: boolean;
 
   // Metrics
@@ -50,6 +51,7 @@ const PortfolioContext = createContext<PortfolioContextType | undefined>(undefin
 export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [detectedColumns, setDetectedColumns] = useState<ColumnMapping | null>(null);
   const [allocationPreset, setAllocationPresetState] = useState<AllocationPreset>('balanced');
   const [customTarget, setCustomTargetState] = useState<AllocationTarget>(ALLOCATION_PRESETS.custom);
   const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
@@ -90,12 +92,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     const result = processPortfolioData(csvContent);
     setItems(result.items);
     setValidation(result.validation);
+    setDetectedColumns(result.detectedColumns);
     setDismissedInsights(new Set());
   }, []);
 
   const clearData = useCallback(() => {
     setItems([]);
     setValidation(null);
+    setDetectedColumns(null);
     setDismissedInsights(new Set());
   }, []);
 
@@ -115,6 +119,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const value: PortfolioContextType = {
     items,
     validation,
+    detectedColumns,
     isDataLoaded,
     summary,
     allocation,
