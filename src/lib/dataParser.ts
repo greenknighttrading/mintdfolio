@@ -328,7 +328,7 @@ export function processPortfolioData(
         const totalMarketValue = quantity * marketPrice;
         const totalCostBasis = quantity * averageCostPaid;
         const profitDollars = totalMarketValue - totalCostBasis;
-        const gainPercent = totalCostBasis > 0 ? ((marketPrice - averageCostPaid) / averageCostPaid) * 100 : 0;
+        const gainPercent = totalCostBasis > 0 ? ((totalMarketValue - totalCostBasis) / totalCostBasis) * 100 : 0;
 
         // Classify asset
         const assetType = classifyAssetType(grade, cardNumber);

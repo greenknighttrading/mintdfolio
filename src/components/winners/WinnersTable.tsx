@@ -8,15 +8,18 @@ type SortField = 'gainPercent' | 'profitDollars' | 'totalMarketValue' | 'quantit
 type SortDirection = 'asc' | 'desc';
 type PerformanceFilter = 'all' | 'winners' | 'underperforming' | 200 | 300 | 500;
 
-// Calculate CAGR (Compound Annual Growth Rate)
+// Calculate CAGR (Compound Annual Growth Rate) - uses full years only
 function calculateCAGR(item: PortfolioItem): number | null {
   if (!item.dateAdded || item.totalCostBasis <= 0) return null;
   
   const now = new Date();
-  const yearsHeld = (now.getTime() - item.dateAdded.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+  const msHeld = now.getTime() - item.dateAdded.getTime();
+  const daysHeld = msHeld / (1000 * 60 * 60 * 24);
   
-  // Need at least 30 days to calculate meaningful CAGR
-  if (yearsHeld < 0.08) return null;
+  // Round down to full years - need at least 1 year for CAGR
+  const yearsHeld = Math.floor(daysHeld / 365);
+  
+  if (yearsHeld < 1) return null;
   
   const endingValue = item.totalMarketValue;
   const beginningValue = item.totalCostBasis;

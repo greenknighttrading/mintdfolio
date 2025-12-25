@@ -103,9 +103,9 @@ export const ALLOCATION_PRESETS: Record<AllocationPreset, AllocationTarget> = {
   custom: { sealed: 33, slabs: 34, rawCards: 33 },
 };
 
-export const ALLOCATION_PRESET_INFO: Record<AllocationPreset, { emoji: string; title: string; description: string }> = {
-  conservative: { emoji: '🟢', title: 'The Investor', description: '70/20/10' },
-  balanced: { emoji: '🟡', title: 'The Hybrid Collector-Investor', description: '50/30/20' },
-  aggressive: { emoji: '🔴', title: 'The Purist', description: '25/30/45' },
-  custom: { emoji: '⚙️', title: 'Custom', description: 'Your mix' },
+export const ALLOCATION_PRESET_INFO: Record<AllocationPreset, { title: string; description: string }> = {
+  conservative: { title: 'The Investor', description: '70/20/10' },
+  balanced: { title: 'The Hybrid Collector-Investor', description: '50/30/20' },
+  aggressive: { title: 'The Purist', description: '25/30/45' },
+  custom: { title: 'Custom', description: 'Your mix' },
 };
