@@ -22,10 +22,10 @@ export default function Index() {
               <TrendingUp className="w-8 h-8 text-primary" />
             </div>
             <h1 className="text-4xl font-bold text-foreground tracking-tight">
-              Portfolio Coach
+              mintdfolio
             </h1>
-            <p className="text-xl text-muted-foreground max-w-md mx-auto">
-              Your personal CFO for collectibles. Make calmer, clearer decisions.
+            <p className="text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
+              Like having a Pokémon financial advisor on demand. It analyzes your entire collection as a portfolio of positions, helping you understand risk, returns, and when to hold, rebalance, or take profits.
             </p>
           </div>
 
