@@ -75,23 +75,15 @@ export default function Index() {
 
       {/* Main Grid */}
       <div className="grid lg:grid-cols-3 gap-4">
-        {/* Summary - Full Width on Mobile */}
-        <div className="lg:col-span-2">
+        {/* Left Column (Summary + Allocation flush) */}
+        <div className="lg:col-span-2 flex flex-col gap-0">
           <PortfolioSummaryCard />
-        </div>
-
-        {/* Health Score */}
-        <div>
-          {summary && <HealthScoreCard score={summary.healthScore} />}
-        </div>
-
-        {/* Allocation Donut */}
-        <div className="lg:col-span-2">
           <AllocationDonut />
         </div>
 
-        {/* Concentration Risk */}
-        <div>
+        {/* Right Column */}
+        <div className="flex flex-col gap-4">
+          {summary && <HealthScoreCard score={summary.healthScore} />}
           <ConcentrationCard />
         </div>
 
