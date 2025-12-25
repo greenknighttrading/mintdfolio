@@ -109,7 +109,7 @@ export function RebalanceSimulator() {
     return maxMonths;
   }, [rebalanceAnalysis]);
 
-  const presets: { key: AllocationPreset; label: string; description: string; emoji: string; title: string }[] = [
+  const presets: { key: AllocationPreset; label: string; description: string; title: string }[] = [
     { key: 'conservative', label: 'Conservative', ...ALLOCATION_PRESET_INFO.conservative },
     { key: 'balanced', label: 'Balanced', ...ALLOCATION_PRESET_INFO.balanced },
     { key: 'aggressive', label: 'Aggressive', ...ALLOCATION_PRESET_INFO.aggressive },
@@ -139,10 +139,7 @@ export function RebalanceSimulator() {
                   : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               )}
             >
-              <p className="font-medium flex items-center gap-2">
-                <span>{preset.emoji}</span>
-                {preset.label}
-              </p>
+              <p className="font-medium">{preset.label}</p>
               <p className={cn(
                 "text-xs mt-0.5",
                 allocationPreset === preset.key ? "text-primary-foreground/80" : "text-muted-foreground"
