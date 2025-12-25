@@ -21,7 +21,7 @@ interface AppLayoutProps {
 const navigation = [
   { name: 'Portfolio Health', href: '/', icon: LayoutDashboard },
   { name: 'Insight Feed', href: '/insights', icon: Lightbulb },
-  { name: 'Positions & Return Analysis', href: '/winners', icon: Trophy },
+  { name: 'Position Performance', href: '/winners', icon: Trophy },
   { name: 'Rebalancing Simulator', href: '/rebalance', icon: Scale },
   { name: 'Generate Report', href: '/report', icon: FileText },
 ];
