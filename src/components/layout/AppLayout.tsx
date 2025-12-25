@@ -8,7 +8,8 @@ import {
   Upload,
   Menu,
   X,
-  TrendingUp
+  TrendingUp,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePortfolio } from '@/contexts/PortfolioContext';
@@ -20,8 +21,9 @@ interface AppLayoutProps {
 const navigation = [
   { name: 'Portfolio Health', href: '/', icon: LayoutDashboard },
   { name: 'Insight Feed', href: '/insights', icon: Lightbulb },
-  { name: 'Return Analysis', href: '/winners', icon: Trophy },
+  { name: 'Positions & Return Analysis', href: '/winners', icon: Trophy },
   { name: 'Rebalancing Simulator', href: '/rebalance', icon: Scale },
+  { name: 'Generate Report', href: '/report', icon: FileText },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {

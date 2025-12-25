@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { ArrowRight, DollarSign, Calendar, Scale } from 'lucide-react';
+import { ArrowRight, DollarSign, Calendar, Scale, Check, AlertCircle } from 'lucide-react';
 import { usePortfolio } from '@/contexts/PortfolioContext';
 import { cn } from '@/lib/utils';
 import { AllocationTarget, ALLOCATION_PRESETS, ALLOCATION_PRESET_INFO, AllocationPreset } from '@/lib/types';
 import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
 
 const CONTRIBUTION_PRESETS = [250, 500, 1000, 2500];
 const TIMELINE_PRESETS = [3, 6, 12];
@@ -12,48 +13,62 @@ type RebalanceMode = 'monthly-budget' | 'target-date';
 
 export function RebalanceSimulator() {
   const { allocation, summary, allocationTarget, allocationPreset, setAllocationPreset, setCustomTarget } = usePortfolio();
-  const [customAllocation, setCustomAllocation] = useState<AllocationTarget>(allocationTarget);
+  
+  // Pending custom allocation (independent sliders that don't auto-adjust)
+  const [pendingAllocation, setPendingAllocation] = useState<AllocationTarget>(allocationTarget);
+  // Applied custom allocation (what's actually used for analysis)
+  const [appliedAllocation, setAppliedAllocation] = useState<AllocationTarget>(allocationTarget);
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  
   const [monthlyBudget, setMonthlyBudget] = useState(500);
   const [targetMonths, setTargetMonths] = useState(6);
   const [rebalanceMode, setRebalanceMode] = useState<RebalanceMode>('monthly-budget');
 
   const totalValue = summary?.totalMarketValue || 0;
 
+  // Calculate pending total
+  const pendingTotal = pendingAllocation.sealed + pendingAllocation.slabs + pendingAllocation.rawCards;
+  const isValidTotal = pendingTotal === 100;
+  const hasUnappliedChanges = isCustomMode && (
+    pendingAllocation.sealed !== appliedAllocation.sealed ||
+    pendingAllocation.slabs !== appliedAllocation.slabs ||
+    pendingAllocation.rawCards !== appliedAllocation.rawCards
+  );
+
   const handleSliderChange = (category: keyof AllocationTarget, value: number[]) => {
     const newValue = value[0];
-    const diff = newValue - customAllocation[category];
-    
-    const otherCategories = (['sealed', 'slabs', 'rawCards'] as const).filter(c => c !== category);
-    const adjustment = diff / otherCategories.length;
-
-    const newAllocation = {
-      ...customAllocation,
+    // Independent slider - only update the category being changed
+    setPendingAllocation(prev => ({
+      ...prev,
       [category]: newValue,
-    };
+    }));
+    setIsCustomMode(true);
+  };
 
-    otherCategories.forEach(cat => {
-      newAllocation[cat] = Math.max(0, Math.min(100, customAllocation[cat] - adjustment));
-    });
-
-    const total = newAllocation.sealed + newAllocation.slabs + newAllocation.rawCards;
-    if (total !== 100) {
-      const factor = 100 / total;
-      newAllocation.sealed = Math.round(newAllocation.sealed * factor);
-      newAllocation.slabs = Math.round(newAllocation.slabs * factor);
-      newAllocation.rawCards = 100 - newAllocation.sealed - newAllocation.slabs;
+  const handleApplyCustomAllocation = () => {
+    if (isValidTotal) {
+      setAppliedAllocation(pendingAllocation);
+      setCustomTarget(pendingAllocation);
+      setAllocationPreset('custom');
     }
+  };
 
-    setCustomAllocation(newAllocation);
-    setCustomTarget(newAllocation);
+  const handlePresetClick = (presetKey: AllocationPreset) => {
+    const presetAllocation = ALLOCATION_PRESETS[presetKey];
+    setAllocationPreset(presetKey);
+    setPendingAllocation(presetAllocation);
+    setAppliedAllocation(presetAllocation);
+    setCustomTarget(presetAllocation);
+    setIsCustomMode(false);
   };
 
   const rebalanceAnalysis = useMemo(() => {
     if (!allocation) return null;
 
     const categories = [
-      { key: 'sealed' as const, label: 'Sealed Products', current: allocation.sealed, target: customAllocation.sealed },
-      { key: 'slabs' as const, label: 'Graded Cards', current: allocation.slabs, target: customAllocation.slabs },
-      { key: 'rawCards' as const, label: 'Raw Cards', current: allocation.rawCards, target: customAllocation.rawCards },
+      { key: 'sealed' as const, label: 'Sealed Products', current: allocation.sealed, target: appliedAllocation.sealed },
+      { key: 'slabs' as const, label: 'Graded Cards', current: allocation.slabs, target: appliedAllocation.slabs },
+      { key: 'rawCards' as const, label: 'Raw Cards', current: allocation.rawCards, target: appliedAllocation.rawCards },
     ];
 
     // Calculate total underweight amount (what needs to be added)
@@ -96,7 +111,7 @@ export function RebalanceSimulator() {
         isUnderweight: delta > 100,
       };
     });
-  }, [allocation, customAllocation, totalValue, monthlyBudget, targetMonths]);
+  }, [allocation, appliedAllocation, totalValue, monthlyBudget, targetMonths]);
 
   const totalMonthlyRequired = useMemo(() => {
     if (!rebalanceAnalysis) return 0;
@@ -128,13 +143,10 @@ export function RebalanceSimulator() {
           {presets.map((preset) => (
             <button
               key={preset.key}
-              onClick={() => {
-                setAllocationPreset(preset.key);
-                setCustomAllocation(ALLOCATION_PRESETS[preset.key]);
-              }}
+              onClick={() => handlePresetClick(preset.key)}
               className={cn(
                 "px-4 py-3 rounded-xl transition-all duration-200 text-left min-w-[140px]",
-                allocationPreset === preset.key
+                allocationPreset === preset.key && !isCustomMode
                   ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
                   : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               )}
@@ -142,7 +154,7 @@ export function RebalanceSimulator() {
               <p className="font-medium">{preset.label}</p>
               <p className={cn(
                 "text-xs mt-0.5",
-                allocationPreset === preset.key ? "text-primary-foreground/80" : "text-muted-foreground"
+                allocationPreset === preset.key && !isCustomMode ? "text-primary-foreground/80" : "text-muted-foreground"
               )}>
                 {preset.title} • {preset.description}
               </p>
@@ -157,11 +169,11 @@ export function RebalanceSimulator() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground">{cat.label}</span>
                 <span className="text-sm tabular-nums text-muted-foreground">
-                  {customAllocation[cat.key]}%
+                  {pendingAllocation[cat.key]}%
                 </span>
               </div>
               <Slider
-                value={[customAllocation[cat.key]]}
+                value={[pendingAllocation[cat.key]]}
                 onValueChange={(value) => handleSliderChange(cat.key, value)}
                 max={100}
                 min={0}
@@ -170,6 +182,41 @@ export function RebalanceSimulator() {
               />
             </div>
           ))}
+        </div>
+
+        {/* Total Indicator and Custom Allocation Button */}
+        <div className="mt-6 pt-6 border-t border-border">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Total:</span>
+              <span className={cn(
+                "text-lg font-bold tabular-nums",
+                isValidTotal ? "text-success" : "text-destructive"
+              )}>
+                {pendingTotal}%
+              </span>
+              {isValidTotal ? (
+                <Check className="w-4 h-4 text-success" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-destructive" />
+              )}
+            </div>
+            {!isValidTotal && (
+              <span className="text-xs text-destructive">
+                Must equal 100% ({pendingTotal > 100 ? `-${pendingTotal - 100}%` : `+${100 - pendingTotal}%`})
+              </span>
+            )}
+          </div>
+          
+          <Button
+            onClick={handleApplyCustomAllocation}
+            disabled={!isValidTotal || !hasUnappliedChanges}
+            className="w-full"
+            variant={hasUnappliedChanges && isValidTotal ? "default" : "secondary"}
+          >
+            {hasUnappliedChanges && isValidTotal ? "Apply Custom Allocation" : 
+             !isValidTotal ? "Allocation must equal 100%" : "Custom Allocation Applied"}
+          </Button>
         </div>
       </div>
 

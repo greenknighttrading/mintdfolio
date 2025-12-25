@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Insights from "./pages/Insights";
 import Winners from "./pages/Winners";
 import Rebalance from "./pages/Rebalance";
+import Report from "./pages/Report";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/insights" element={<Insights />} />
               <Route path="/winners" element={<Winners />} />
               <Route path="/rebalance" element={<Rebalance />} />
+              <Route path="/report" element={<Report />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppLayout>
