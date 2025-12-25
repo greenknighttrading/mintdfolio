@@ -325,6 +325,7 @@ export function processPortfolioData(
         }
 
         // Calculate derived fields
+        // totalCostBasis = quantity * averageCostPaid (unit cost)
         const totalMarketValue = quantity * marketPrice;
         const totalCostBasis = quantity * averageCostPaid;
         const profitDollars = totalMarketValue - totalCostBasis;
