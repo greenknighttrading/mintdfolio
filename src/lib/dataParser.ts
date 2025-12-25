@@ -325,9 +325,19 @@ export function processPortfolioData(
         }
 
         // Calculate derived fields
-        // totalCostBasis = quantity * averageCostPaid (unit cost)
-        const totalMarketValue = quantity * marketPrice;
-        const totalCostBasis = quantity * averageCostPaid;
+        // Treat incoming values as either per-unit or totals based on header text.
+        const marketHeader = String(columnMap.marketPrice ?? '').toLowerCase();
+        const costHeader = String(columnMap.averageCostPaid ?? '').toLowerCase();
+
+        const marketLooksPerUnit = /\b(each|unit|per)\b/.test(marketHeader);
+        const costLooksTotal = /\btotal\b/.test(costHeader);
+
+        const totalMarketValue = marketLooksPerUnit ? quantity * marketPrice : marketPrice;
+        const unitMarketPrice = quantity > 0 ? totalMarketValue / quantity : 0;
+
+        const totalCostBasis = costLooksTotal ? averageCostPaid : quantity * averageCostPaid;
+        const unitCostBasis = quantity > 0 ? totalCostBasis / quantity : 0;
+
         const profitDollars = totalMarketValue - totalCostBasis;
         const gainPercent = totalCostBasis > 0 ? ((totalMarketValue - totalCostBasis) / totalCostBasis) * 100 : 0;
 
@@ -340,8 +350,8 @@ export function processPortfolioData(
           productName: row[columnMap.productName!],
           category: row[columnMap.category || ''] || 'Uncategorized',
           quantity,
-          marketPrice,
-          averageCostPaid,
+          marketPrice: unitMarketPrice,
+          averageCostPaid: unitCostBasis,
           grade,
           cardNumber,
           dateAdded: parseDate(row[columnMap.dateAdded || '']),
