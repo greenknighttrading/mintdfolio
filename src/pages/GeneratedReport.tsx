@@ -71,11 +71,14 @@ export default function GeneratedReport() {
     setIsGeneratingImage(true);
 
     const EXPORT_CONTENT_WIDTH = 900;
-    const EXPORT_PADDING = 24;
+    // Extra breathing room so the right edge (text/shadows) never gets clipped
+    const EXPORT_PADDING = 48;
+    const EXPORT_BLEED = 12;
 
     try {
       const iframeDoc = iframeRef.current.contentDocument;
-      const reportEl = (iframeDoc.querySelector("#report-root") as HTMLElement | null) ??
+      const reportEl =
+        (iframeDoc.querySelector("#report-root") as HTMLElement | null) ??
         (iframeDoc.querySelector(".container") as HTMLElement | null);
 
       if (!reportEl) {
@@ -91,15 +94,14 @@ export default function GeneratedReport() {
       // Wait for images
       const imgs = Array.from(iframeDoc.images ?? []);
       await Promise.all(
-        imgs.map(
-          (img) =>
-            img.complete
-              ? Promise.resolve()
-              : new Promise<void>((resolve) => {
-                  const done = () => resolve();
-                  img.addEventListener("load", done, { once: true });
-                  img.addEventListener("error", done, { once: true });
-                })
+        imgs.map((img) =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                const done = () => resolve();
+                img.addEventListener("load", done, { once: true });
+                img.addEventListener("error", done, { once: true });
+              })
         )
       );
 
@@ -114,20 +116,25 @@ export default function GeneratedReport() {
       `;
       iframeDoc.head.appendChild(style);
 
-      // Build an offscreen export wrapper so we can add safe padding (prevents right-edge clipping)
+      // Build an export wrapper INSIDE the iframe (keep it on-screen to avoid blank captures)
       const exportHost = iframeDoc.createElement("div");
       exportHost.setAttribute("data-export-host", "true");
 
       const bodyStyle = iframeDoc.defaultView?.getComputedStyle(iframeDoc.body);
+      // Ensure we always capture with a non-transparent background (otherwise light text can look "blank")
+      const solidBg = "#0f172a";
+
       exportHost.style.position = "fixed";
-      exportHost.style.left = "-10000px";
+      exportHost.style.left = "0";
       exportHost.style.top = "0";
+      exportHost.style.zIndex = "2147483647";
+      exportHost.style.pointerEvents = "none";
       exportHost.style.boxSizing = "border-box";
       exportHost.style.padding = `${EXPORT_PADDING}px`;
       exportHost.style.overflow = "visible";
       exportHost.style.width = `${EXPORT_CONTENT_WIDTH + EXPORT_PADDING * 2}px`;
       exportHost.style.maxWidth = exportHost.style.width;
-      exportHost.style.background = bodyStyle?.background ?? "#0f172a";
+      exportHost.style.background = bodyStyle?.background && bodyStyle.background !== "rgba(0, 0, 0, 0)" ? bodyStyle.background : solidBg;
 
       const clone = reportEl.cloneNode(true) as HTMLElement;
       clone.style.width = `${EXPORT_CONTENT_WIDTH}px`;
@@ -142,14 +149,15 @@ export default function GeneratedReport() {
       await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 50)));
 
       // Measure exact dimensions (avoid window.innerWidth; fix right-edge clipping)
-      const captureWidth = Math.ceil(exportHost.scrollWidth) + 2;
-      const captureHeight = Math.ceil(exportHost.scrollHeight) + 2;
+      const captureWidth = Math.ceil(exportHost.scrollWidth) + EXPORT_BLEED * 2;
+      const captureHeight = Math.ceil(exportHost.scrollHeight) + EXPORT_BLEED * 2;
 
       const dataUrl = await toPng(exportHost, {
         pixelRatio: 2,
         width: captureWidth,
         height: captureHeight,
         cacheBust: true,
+        backgroundColor: solidBg,
         filter: (node) => node.tagName !== "SCRIPT",
       });
 
