@@ -1,11 +1,11 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import { Download, Loader2 } from "lucide-react";
+import { toPng } from "html-to-image";
 
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { Button } from "@/components/ui/button";
 import { buildPortfolioReportHtml } from "@/lib/reportHtml";
 import { Seo } from "@/components/seo/Seo";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function GeneratedReport() {
@@ -22,7 +22,8 @@ export default function GeneratedReport() {
   } = usePortfolio();
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
 
   const html = useMemo(() => {
     return buildPortfolioReportHtml({
@@ -37,10 +38,37 @@ export default function GeneratedReport() {
     });
   }, [summary, allocation, concentration, milestones, insights, allocationTarget, allocationPreset, items]);
 
-  const downloadAsPdf = async () => {
-    if (!iframeRef.current?.contentDocument?.body) return;
+  // Wait for iframe to fully load
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
 
-    setIsGeneratingPdf(true);
+    const handleLoad = () => {
+      // Wait for fonts to load
+      const iframeDoc = iframe.contentDocument;
+      if (iframeDoc) {
+        if (iframeDoc.fonts && iframeDoc.fonts.ready) {
+          iframeDoc.fonts.ready.then(() => {
+            setIframeLoaded(true);
+          });
+        } else {
+          // Fallback for browsers without font loading API
+          setTimeout(() => setIframeLoaded(true), 500);
+        }
+      }
+    };
+
+    iframe.addEventListener('load', handleLoad);
+    return () => iframe.removeEventListener('load', handleLoad);
+  }, [html]);
+
+  const downloadAsImage = async () => {
+    if (!iframeRef.current?.contentDocument?.body) {
+      toast.error("Report not ready yet. Please wait a moment.");
+      return;
+    }
+
+    setIsGeneratingImage(true);
 
     try {
       const iframeDoc = iframeRef.current.contentDocument;
@@ -51,76 +79,75 @@ export default function GeneratedReport() {
         return;
       }
 
-      // Get the container's outer HTML for server-side rendering
-      const reportHtml = container.outerHTML;
-
-      // Call backend function to generate PDF
-      const { data, error } = await supabase.functions.invoke("generate-pdf", {
-        body: { html: reportHtml },
-      });
-
-      if (error) {
-        console.error("PDF generation error:", error);
-        toast.error("Failed to generate PDF. Please try again.");
-        return;
+      // Wait for fonts to be ready
+      if (iframeDoc.fonts && iframeDoc.fonts.ready) {
+        await iframeDoc.fonts.ready;
       }
 
-      // Supabase Functions client returns a Blob for application/pdf responses.
-      // Still, we normalize defensively so the downloaded file is always valid.
-      const pdfBlob = normalizePdfBlob(data);
+      // Add a small delay to ensure all images and styles are loaded
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      const url = URL.createObjectURL(pdfBlob);
+      // Temporarily disable animations and transitions
+      const style = iframeDoc.createElement('style');
+      style.id = 'capture-styles';
+      style.textContent = `
+        *, *::before, *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      `;
+      iframeDoc.head.appendChild(style);
+
+      // Capture the container with high resolution (2x scale)
+      const dataUrl = await toPng(container, {
+        pixelRatio: 2,
+        backgroundColor: '#0f172a', // Dark theme background
+        cacheBust: true,
+        filter: (node) => {
+          // Filter out any script elements
+          if (node.tagName === 'SCRIPT') return false;
+          return true;
+        },
+      });
+
+      // Remove temporary styles
+      const captureStyle = iframeDoc.getElementById('capture-styles');
+      if (captureStyle) {
+        captureStyle.remove();
+      }
+
+      // Create download link
       const link = document.createElement("a");
-      link.href = url;
-      link.download = `mintdfolio-report-${new Date().toISOString().split("T")[0]}.pdf`;
+      link.href = dataUrl;
+      link.download = `mintdfolio-report-${new Date().toISOString().split("T")[0]}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
-      toast.success("PDF downloaded successfully!");
+      toast.success("Image downloaded successfully!");
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Failed to generate PDF. Please try again.");
+      console.error("Error generating image:", error);
+      toast.error("Failed to generate image. Please try again.");
+      
+      // Clean up styles on error
+      const iframeDoc = iframeRef.current?.contentDocument;
+      if (iframeDoc) {
+        const captureStyle = iframeDoc.getElementById('capture-styles');
+        if (captureStyle) {
+          captureStyle.remove();
+        }
+      }
     } finally {
-      setIsGeneratingPdf(false);
+      setIsGeneratingImage(false);
     }
   };
-
-function normalizePdfBlob(data: unknown): Blob {
-  if (data instanceof Blob) return data;
-  if (data instanceof ArrayBuffer) return new Blob([data], { type: "application/pdf" });
-  if (data instanceof Uint8Array) {
-    return new Blob([data as unknown as BlobPart], { type: "application/pdf" });
-  }
-
-  // Some environments serialize Uint8Array into a plain object like {"0":37,"1":80,...}
-  if (data && typeof data === "object") {
-    const keys = Object.keys(data as Record<string, unknown>);
-    const looksLikeByteObject = keys.length > 0 && keys.every((k) => /^\d+$/.test(k));
-
-    if (looksLikeByteObject) {
-      const bytes = new Uint8Array(
-        keys
-          .map((k) => Number(k))
-          .sort((a, b) => a - b)
-          .map((i) => Number((data as Record<string, unknown>)[String(i)] ?? 0))
-      );
-      return new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
-    }
-  }
-
-  // Fallback: best-effort stringification (will still produce a valid download, but may not open)
-  return new Blob([String(data ?? "")], { type: "application/pdf" });
-}
-
 
   if (!isDataLoaded) {
     return (
       <main className="min-h-screen flex items-center justify-center p-6 bg-background">
         <Seo
           title="Portfolio Report | mintdfolio"
-          description="Generate a detailed portfolio analysis report and download it as a document."
+          description="Generate a detailed portfolio analysis report and download it as an image."
           canonicalPath="/report/generated"
         />
 
@@ -137,7 +164,7 @@ function normalizePdfBlob(data: unknown): Blob {
     <main className="min-h-screen bg-background">
       <Seo
         title="Portfolio Report | mintdfolio"
-        description="View your portfolio analysis report and download it as a document."
+        description="View your portfolio analysis report and download it as an image."
         canonicalPath="/report/generated"
       />
 
@@ -148,16 +175,20 @@ function normalizePdfBlob(data: unknown): Blob {
           Generated from the MintdFolio App
         </div>
 
-        <Button onClick={downloadAsPdf} size="sm" disabled={isGeneratingPdf}>
-          {isGeneratingPdf ? (
+        <Button 
+          onClick={downloadAsImage} 
+          size="sm" 
+          disabled={isGeneratingImage || !iframeLoaded}
+        >
+          {isGeneratingImage ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Generating PDF...
+              Preparing image...
             </>
           ) : (
             <>
               <Download className="w-4 h-4 mr-2" />
-              Download as PDF
+              Save Report as Image
             </>
           )}
         </Button>
