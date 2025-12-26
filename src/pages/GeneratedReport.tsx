@@ -1,7 +1,5 @@
-import React, { useMemo, useRef, useState } from "react";
-import { Download, Loader2 } from "lucide-react";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
+import React, { useMemo, useRef } from "react";
+import { Download } from "lucide-react";
 
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { Button } from "@/components/ui/button";
@@ -22,7 +20,6 @@ export default function GeneratedReport() {
   } = usePortfolio();
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const html = useMemo(() => {
     return buildPortfolioReportHtml({
@@ -37,62 +34,9 @@ export default function GeneratedReport() {
     });
   }, [summary, allocation, concentration, milestones, insights, allocationTarget, allocationPreset, items]);
 
-  const downloadAsPdf = async () => {
-    if (!iframeRef.current?.contentDocument?.body) return;
-    
-    setIsGeneratingPdf(true);
-    
-    try {
-      const iframeDoc = iframeRef.current.contentDocument;
-      const container = iframeDoc.querySelector('.container') as HTMLElement;
-      
-      if (!container) {
-        console.error('Container not found in iframe');
-        setIsGeneratingPdf(false);
-        return;
-      }
-
-      // Capture at high resolution for print quality
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#0f172a',
-        windowWidth: 850,
-        windowHeight: container.scrollHeight,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // Add additional pages if needed
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      pdf.save(`mintdfolio-report-${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-    } finally {
-      setIsGeneratingPdf(false);
+  const handlePrint = () => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.print();
     }
   };
 
@@ -129,18 +73,9 @@ export default function GeneratedReport() {
           Generated from the MintdFolio App
         </div>
 
-        <Button onClick={downloadAsPdf} size="sm" disabled={isGeneratingPdf}>
-          {isGeneratingPdf ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Generating PDF...
-            </>
-          ) : (
-            <>
-              <Download className="w-4 h-4 mr-2" />
-              Download as PDF
-            </>
-          )}
+        <Button onClick={handlePrint} size="sm">
+          <Download className="w-4 h-4 mr-2" />
+          Print / Save as PDF
         </Button>
       </header>
 

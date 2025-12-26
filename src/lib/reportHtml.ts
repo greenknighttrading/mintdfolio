@@ -982,7 +982,7 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
                 <td>${item.quantity}</td>
                 <td>$${item.totalCostBasis.toLocaleString()}</td>
                 <td>$${item.totalMarketValue.toLocaleString()}</td>
-                <td class="${item.gain >= 0 ? 'positive' : 'negative'}">${item.gain >= 0 ? '+' : ''}$${item.gain.toLocaleString()}</td>
+                <td class="${item.profitDollars >= 0 ? 'positive' : 'negative'}">${item.profitDollars >= 0 ? '+' : ''}$${item.profitDollars.toLocaleString()}</td>
                 <td class="${item.gainPercent >= 0 ? 'positive' : 'negative'}">${item.gainPercent >= 0 ? '+' : ''}${item.gainPercent.toFixed(1)}%</td>
               </tr>
             `).join('')}
