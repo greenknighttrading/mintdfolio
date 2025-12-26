@@ -70,40 +70,42 @@ export default function GeneratedReport() {
 
     setIsGeneratingImage(true);
 
+    const EXPORT_CONTENT_WIDTH = 900;
+    const EXPORT_PADDING = 24;
+
     try {
       const iframeDoc = iframeRef.current.contentDocument;
-      const container = iframeDoc.querySelector(".container") as HTMLElement;
+      const reportEl = (iframeDoc.querySelector("#report-root") as HTMLElement | null) ??
+        (iframeDoc.querySelector(".container") as HTMLElement | null);
 
-      if (!container) {
+      if (!reportEl) {
         toast.error("Could not find report content");
         return;
       }
 
-      // Wait for fonts to be ready
+      // Wait for fonts
       if (iframeDoc.fonts && iframeDoc.fonts.ready) {
         await iframeDoc.fonts.ready;
       }
 
-      // Add a small delay to ensure all images and styles are loaded
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Wait for images
+      const imgs = Array.from(iframeDoc.images ?? []);
+      await Promise.all(
+        imgs.map(
+          (img) =>
+            img.complete
+              ? Promise.resolve()
+              : new Promise<void>((resolve) => {
+                  const done = () => resolve();
+                  img.addEventListener("load", done, { once: true });
+                  img.addEventListener("error", done, { once: true });
+                })
+        )
+      );
 
-      // Store original styles
-      const originalWidth = container.style.width;
-      const originalMaxWidth = container.style.maxWidth;
-      const originalOverflow = container.style.overflow;
-      const originalMargin = container.style.margin;
-      const originalPadding = container.style.padding;
-
-      // Force fixed width for deterministic capture
-      container.style.width = '900px';
-      container.style.maxWidth = '900px';
-      container.style.overflow = 'visible';
-      container.style.margin = '0 auto';
-      container.style.padding = '24px';
-
-      // Temporarily disable animations and transitions
-      const style = iframeDoc.createElement('style');
-      style.id = 'capture-styles';
+      // Temporarily disable animations/transitions inside the iframe
+      const style = iframeDoc.createElement("style");
+      style.id = "capture-styles";
       style.textContent = `
         *, *::before, *::after {
           animation: none !important;
@@ -112,40 +114,51 @@ export default function GeneratedReport() {
       `;
       iframeDoc.head.appendChild(style);
 
-      // Wait for reflow
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Build an offscreen export wrapper so we can add safe padding (prevents right-edge clipping)
+      const exportHost = iframeDoc.createElement("div");
+      exportHost.setAttribute("data-export-host", "true");
 
-      // Measure the actual dimensions after forcing width
-      const captureWidth = container.scrollWidth;
-      const captureHeight = container.scrollHeight;
+      const bodyStyle = iframeDoc.defaultView?.getComputedStyle(iframeDoc.body);
+      exportHost.style.position = "fixed";
+      exportHost.style.left = "-10000px";
+      exportHost.style.top = "0";
+      exportHost.style.boxSizing = "border-box";
+      exportHost.style.padding = `${EXPORT_PADDING}px`;
+      exportHost.style.overflow = "visible";
+      exportHost.style.width = `${EXPORT_CONTENT_WIDTH + EXPORT_PADDING * 2}px`;
+      exportHost.style.maxWidth = exportHost.style.width;
+      exportHost.style.background = bodyStyle?.background ?? "#0f172a";
 
-      // Capture with exact dimensions and 2x scale for crispness
-      const dataUrl = await toPng(container, {
+      const clone = reportEl.cloneNode(true) as HTMLElement;
+      clone.style.width = `${EXPORT_CONTENT_WIDTH}px`;
+      clone.style.maxWidth = `${EXPORT_CONTENT_WIDTH}px`;
+      clone.style.margin = "0 auto";
+      clone.style.overflow = "visible";
+
+      exportHost.appendChild(clone);
+      iframeDoc.body.appendChild(exportHost);
+
+      // Allow layout to settle
+      await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 50)));
+
+      // Measure exact dimensions (avoid window.innerWidth; fix right-edge clipping)
+      const captureWidth = Math.ceil(exportHost.scrollWidth) + 2;
+      const captureHeight = Math.ceil(exportHost.scrollHeight) + 2;
+
+      const dataUrl = await toPng(exportHost, {
         pixelRatio: 2,
         width: captureWidth,
         height: captureHeight,
-        backgroundColor: '#0f172a', // Dark theme background
         cacheBust: true,
-        filter: (node) => {
-          if (node.tagName === 'SCRIPT') return false;
-          return true;
-        },
+        filter: (node) => node.tagName !== "SCRIPT",
       });
 
-      // Restore original styles
-      container.style.width = originalWidth;
-      container.style.maxWidth = originalMaxWidth;
-      container.style.overflow = originalOverflow;
-      container.style.margin = originalMargin;
-      container.style.padding = originalPadding;
+      // Cleanup temporary DOM + styles
+      exportHost.remove();
+      const captureStyle = iframeDoc.getElementById("capture-styles");
+      captureStyle?.remove();
 
-      // Remove temporary styles
-      const captureStyle = iframeDoc.getElementById('capture-styles');
-      if (captureStyle) {
-        captureStyle.remove();
-      }
-
-      // Create download link
+      // Trigger download
       const link = document.createElement("a");
       link.href = dataUrl;
       link.download = `mintdfolio-report-${new Date().toISOString().split("T")[0]}.png`;
@@ -157,22 +170,12 @@ export default function GeneratedReport() {
     } catch (error) {
       console.error("Error generating image:", error);
       toast.error("Failed to generate image. Please try again.");
-      
-      // Clean up styles on error
+
+      // Clean up if anything was left behind
       const iframeDoc = iframeRef.current?.contentDocument;
       if (iframeDoc) {
-        const container = iframeDoc.querySelector(".container") as HTMLElement;
-        if (container) {
-          container.style.width = '';
-          container.style.maxWidth = '';
-          container.style.overflow = '';
-          container.style.margin = '';
-          container.style.padding = '';
-        }
-        const captureStyle = iframeDoc.getElementById('capture-styles');
-        if (captureStyle) {
-          captureStyle.remove();
-        }
+        iframeDoc.querySelector('[data-export-host="true"]')?.remove();
+        iframeDoc.getElementById("capture-styles")?.remove();
       }
     } finally {
       setIsGeneratingImage(false);
