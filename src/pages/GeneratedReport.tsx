@@ -39,23 +39,22 @@ export default function GeneratedReport() {
 
   const downloadAsPdf = async () => {
     if (!iframeRef.current?.contentDocument?.body) return;
-    
+
     setIsGeneratingPdf(true);
-    
+
     try {
       const iframeDoc = iframeRef.current.contentDocument;
-      const container = iframeDoc.querySelector('.container') as HTMLElement;
-      
+      const container = iframeDoc.querySelector(".container") as HTMLElement;
+
       if (!container) {
         toast.error("Could not find report content");
-        setIsGeneratingPdf(false);
         return;
       }
 
       // Get the container's outer HTML for server-side rendering
       const reportHtml = container.outerHTML;
 
-      // Call edge function to generate PDF with headless Chromium
+      // Call backend function to generate PDF
       const { data, error } = await supabase.functions.invoke("generate-pdf", {
         body: { html: reportHtml },
       });
@@ -63,13 +62,14 @@ export default function GeneratedReport() {
       if (error) {
         console.error("PDF generation error:", error);
         toast.error("Failed to generate PDF. Please try again.");
-        setIsGeneratingPdf(false);
         return;
       }
 
-      // Create blob and download
-      const blob = new Blob([data], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
+      // Supabase Functions client returns a Blob for application/pdf responses.
+      // Still, we normalize defensively so the downloaded file is always valid.
+      const pdfBlob = normalizePdfBlob(data);
+
+      const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `mintdfolio-report-${new Date().toISOString().split("T")[0]}.pdf`;
@@ -86,6 +86,34 @@ export default function GeneratedReport() {
       setIsGeneratingPdf(false);
     }
   };
+
+function normalizePdfBlob(data: unknown): Blob {
+  if (data instanceof Blob) return data;
+  if (data instanceof ArrayBuffer) return new Blob([data], { type: "application/pdf" });
+  if (data instanceof Uint8Array) {
+    return new Blob([data as unknown as BlobPart], { type: "application/pdf" });
+  }
+
+  // Some environments serialize Uint8Array into a plain object like {"0":37,"1":80,...}
+  if (data && typeof data === "object") {
+    const keys = Object.keys(data as Record<string, unknown>);
+    const looksLikeByteObject = keys.length > 0 && keys.every((k) => /^\d+$/.test(k));
+
+    if (looksLikeByteObject) {
+      const bytes = new Uint8Array(
+        keys
+          .map((k) => Number(k))
+          .sort((a, b) => a - b)
+          .map((i) => Number((data as Record<string, unknown>)[String(i)] ?? 0))
+      );
+      return new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
+    }
+  }
+
+  // Fallback: best-effort stringification (will still produce a valid download, but may not open)
+  return new Blob([String(data ?? "")], { type: "application/pdf" });
+}
+
 
   if (!isDataLoaded) {
     return (
