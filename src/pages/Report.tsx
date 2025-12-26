@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { usePortfolio } from '@/contexts/PortfolioContext';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Download, Inbox, Sparkles, TrendingUp, Shield, Target, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -7,24 +8,12 @@ import { cn } from '@/lib/utils';
 export default function Report() {
   const { isDataLoaded, summary, allocation, concentration, milestones, insights, items, allocationTarget, allocationPreset } = usePortfolio();
   const [isGenerating, setIsGenerating] = useState(false);
+  const navigate = useNavigate();
 
   const generateReport = () => {
     setIsGenerating(true);
-    
-    // Build the report content
-    const reportContent = generateReportContent();
-    
-    // Create and download the file
-    const blob = new Blob([reportContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'mintdfolio-portfolio-report.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
+    // Navigate to the generated report page
+    navigate('/report/generated');
     setIsGenerating(false);
   };
 
@@ -915,14 +904,14 @@ It's <em>refining execution</em>.`;
               </>
             ) : (
               <>
-                <Download className="w-5 h-5" />
-                Download Report
+                <FileText className="w-5 h-5" />
+                Generate Report
               </>
             )}
           </Button>
 
           <p className="text-xs text-muted-foreground mt-4">
-            Downloads as an HTML file you can view in any browser or print to PDF
+            Opens a full report page where you can download as PDF
           </p>
         </div>
       </div>

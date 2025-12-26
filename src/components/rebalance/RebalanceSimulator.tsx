@@ -55,11 +55,12 @@ export function RebalanceSimulator() {
 
   const handlePresetClick = (presetKey: AllocationPreset) => {
     const presetAllocation = ALLOCATION_PRESETS[presetKey];
+    // Reset custom mode first to ensure preset highlighting works
+    setIsCustomMode(false);
     setAllocationPreset(presetKey);
     setPendingAllocation(presetAllocation);
     setAppliedAllocation(presetAllocation);
     setCustomTarget(presetAllocation);
-    setIsCustomMode(false);
   };
 
   const rebalanceAnalysis = useMemo(() => {
