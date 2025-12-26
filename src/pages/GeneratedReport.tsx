@@ -1,10 +1,10 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download, FileText, Loader2 } from "lucide-react";
 import { toPng } from "html-to-image";
 
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { Button } from "@/components/ui/button";
-import { buildPortfolioReportHtml } from "@/lib/reportHtml";
+import { buildPortfolioReportHtml, buildPortfolioReportText } from "@/lib/reportHtml";
 import { Seo } from "@/components/seo/Seo";
 import { toast } from "sonner";
 
@@ -87,6 +87,20 @@ export default function GeneratedReport() {
       // Add a small delay to ensure all images and styles are loaded
       await new Promise(resolve => setTimeout(resolve, 300));
 
+      // Store original styles
+      const originalWidth = container.style.width;
+      const originalMaxWidth = container.style.maxWidth;
+      const originalOverflow = container.style.overflow;
+      const originalMargin = container.style.margin;
+      const originalPadding = container.style.padding;
+
+      // Force fixed width for deterministic capture
+      container.style.width = '900px';
+      container.style.maxWidth = '900px';
+      container.style.overflow = 'visible';
+      container.style.margin = '0 auto';
+      container.style.padding = '24px';
+
       // Temporarily disable animations and transitions
       const style = iframeDoc.createElement('style');
       style.id = 'capture-styles';
@@ -98,17 +112,32 @@ export default function GeneratedReport() {
       `;
       iframeDoc.head.appendChild(style);
 
-      // Capture the container with high resolution (2x scale)
+      // Wait for reflow
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Measure the actual dimensions after forcing width
+      const captureWidth = container.scrollWidth;
+      const captureHeight = container.scrollHeight;
+
+      // Capture with exact dimensions and 2x scale for crispness
       const dataUrl = await toPng(container, {
         pixelRatio: 2,
+        width: captureWidth,
+        height: captureHeight,
         backgroundColor: '#0f172a', // Dark theme background
         cacheBust: true,
         filter: (node) => {
-          // Filter out any script elements
           if (node.tagName === 'SCRIPT') return false;
           return true;
         },
       });
+
+      // Restore original styles
+      container.style.width = originalWidth;
+      container.style.maxWidth = originalMaxWidth;
+      container.style.overflow = originalOverflow;
+      container.style.margin = originalMargin;
+      container.style.padding = originalPadding;
 
       // Remove temporary styles
       const captureStyle = iframeDoc.getElementById('capture-styles');
@@ -132,6 +161,14 @@ export default function GeneratedReport() {
       // Clean up styles on error
       const iframeDoc = iframeRef.current?.contentDocument;
       if (iframeDoc) {
+        const container = iframeDoc.querySelector(".container") as HTMLElement;
+        if (container) {
+          container.style.width = '';
+          container.style.maxWidth = '';
+          container.style.overflow = '';
+          container.style.margin = '';
+          container.style.padding = '';
+        }
         const captureStyle = iframeDoc.getElementById('capture-styles');
         if (captureStyle) {
           captureStyle.remove();
@@ -140,6 +177,31 @@ export default function GeneratedReport() {
     } finally {
       setIsGeneratingImage(false);
     }
+  };
+
+  const downloadAsText = () => {
+    const textContent = buildPortfolioReportText({
+      summary,
+      allocation,
+      concentration,
+      milestones: milestones ?? [],
+      insights: insights ?? [],
+      allocationTarget,
+      allocationPreset,
+      items,
+    });
+
+    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `mintdfolio-report-${new Date().toISOString().split("T")[0]}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success("Text report downloaded successfully!");
   };
 
   if (!isDataLoaded) {
@@ -175,23 +237,33 @@ export default function GeneratedReport() {
           Generated from the MintdFolio App
         </div>
 
-        <Button 
-          onClick={downloadAsImage} 
-          size="sm" 
-          disabled={isGeneratingImage || !iframeLoaded}
-        >
-          {isGeneratingImage ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Preparing image...
-            </>
-          ) : (
-            <>
-              <Download className="w-4 h-4 mr-2" />
-              Save Report as Image
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={downloadAsText} 
+            size="sm" 
+            variant="outline"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Export as .txt
+          </Button>
+          <Button 
+            onClick={downloadAsImage} 
+            size="sm" 
+            disabled={isGeneratingImage || !iframeLoaded}
+          >
+            {isGeneratingImage ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Preparing image...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 mr-2" />
+                Save Report as Image
+              </>
+            )}
+          </Button>
+        </div>
       </header>
 
       <section className="px-4 lg:px-6 pb-6 max-w-6xl mx-auto">
