@@ -76,6 +76,7 @@ export default function GeneratedReport() {
 
       if (!container) {
         toast.error("Could not find report content");
+        setIsGeneratingImage(false);
         return;
       }
 
@@ -83,48 +84,77 @@ export default function GeneratedReport() {
       if (iframeDoc.fonts && iframeDoc.fonts.ready) {
         await iframeDoc.fonts.ready;
       }
-
-      // Add a small delay to ensure all images and styles are loaded
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Store original styles
-      const originalWidth = container.style.width;
-      const originalMaxWidth = container.style.maxWidth;
-      const originalOverflow = container.style.overflow;
-      const originalMargin = container.style.margin;
-      const originalPadding = container.style.padding;
-
-      // Force fixed width for deterministic capture
-      container.style.width = '900px';
-      container.style.maxWidth = '900px';
-      container.style.overflow = 'visible';
-      container.style.margin = '0 auto';
-      container.style.padding = '24px';
-
-      // Temporarily disable animations and transitions
-      const style = iframeDoc.createElement('style');
-      style.id = 'capture-styles';
-      style.textContent = `
+      // Clone the entire container into an offscreen wrapper in the main document
+      const clone = container.cloneNode(true) as HTMLElement;
+      
+      // Create offscreen container with fixed dimensions
+      const offscreen = document.createElement('div');
+      offscreen.id = 'offscreen-capture';
+      offscreen.style.cssText = `
+        position: fixed;
+        left: -99999px;
+        top: 0;
+        width: 1000px;
+        min-width: 1000px;
+        max-width: 1000px;
+        overflow: visible;
+        background: #0f172a;
+        padding: 32px;
+        box-sizing: border-box;
+        z-index: -9999;
+      `;
+      
+      // Copy all styles from iframe to clone
+      const iframeStyles = Array.from(iframeDoc.querySelectorAll('style, link[rel="stylesheet"]'));
+      iframeStyles.forEach(styleEl => {
+        const clonedStyle = styleEl.cloneNode(true);
+        offscreen.appendChild(clonedStyle);
+      });
+      
+      // Add capture-specific styles to disable animations
+      const captureStyle = document.createElement('style');
+      captureStyle.textContent = `
         *, *::before, *::after {
           animation: none !important;
           transition: none !important;
         }
+        .container {
+          width: 100% !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
       `;
-      iframeDoc.head.appendChild(style);
+      offscreen.appendChild(captureStyle);
+      
+      // Style the clone
+      clone.style.cssText = `
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+      `;
+      
+      offscreen.appendChild(clone);
+      document.body.appendChild(offscreen);
 
-      // Wait for reflow
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for fonts to load in main document and reflow
+      await document.fonts.ready;
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Measure the actual dimensions after forcing width
-      const captureWidth = container.scrollWidth;
-      const captureHeight = container.scrollHeight;
+      // Measure the clone dimensions
+      const captureWidth = clone.scrollWidth;
+      const captureHeight = clone.scrollHeight;
 
-      // Capture with exact dimensions and 2x scale for crispness
-      const dataUrl = await toPng(container, {
+      // Capture the clone with exact dimensions
+      const dataUrl = await toPng(offscreen, {
         pixelRatio: 2,
-        width: captureWidth,
-        height: captureHeight,
-        backgroundColor: '#0f172a', // Dark theme background
+        width: captureWidth + 64, // Account for padding
+        height: captureHeight + 64,
+        backgroundColor: '#0f172a',
         cacheBust: true,
         filter: (node) => {
           if (node.tagName === 'SCRIPT') return false;
@@ -132,17 +162,16 @@ export default function GeneratedReport() {
         },
       });
 
-      // Restore original styles
-      container.style.width = originalWidth;
-      container.style.maxWidth = originalMaxWidth;
-      container.style.overflow = originalOverflow;
-      container.style.margin = originalMargin;
-      container.style.padding = originalPadding;
+      // Clean up offscreen container
+      document.body.removeChild(offscreen);
 
-      // Remove temporary styles
-      const captureStyle = iframeDoc.getElementById('capture-styles');
-      if (captureStyle) {
-        captureStyle.remove();
+      // Validate the image was captured correctly
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => { img.onload = resolve; });
+      
+      if (img.width < captureWidth) {
+        console.warn('Image may be clipped, width:', img.width, 'expected:', captureWidth + 64);
       }
 
       // Create download link
@@ -158,21 +187,10 @@ export default function GeneratedReport() {
       console.error("Error generating image:", error);
       toast.error("Failed to generate image. Please try again.");
       
-      // Clean up styles on error
-      const iframeDoc = iframeRef.current?.contentDocument;
-      if (iframeDoc) {
-        const container = iframeDoc.querySelector(".container") as HTMLElement;
-        if (container) {
-          container.style.width = '';
-          container.style.maxWidth = '';
-          container.style.overflow = '';
-          container.style.margin = '';
-          container.style.padding = '';
-        }
-        const captureStyle = iframeDoc.getElementById('capture-styles');
-        if (captureStyle) {
-          captureStyle.remove();
-        }
+      // Clean up offscreen container on error
+      const offscreen = document.getElementById('offscreen-capture');
+      if (offscreen) {
+        document.body.removeChild(offscreen);
       }
     } finally {
       setIsGeneratingImage(false);
