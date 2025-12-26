@@ -4,7 +4,7 @@ import { ArrowLeft, Download } from "lucide-react";
 
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { Button } from "@/components/ui/button";
-import { buildPortfolioReportHtml } from "@/lib/reportHtml";
+import { buildPortfolioReportHtml, buildPortfolioReportText } from "@/lib/reportHtml";
 import { Seo } from "@/components/seo/Seo";
 
 export default function GeneratedReport() {
@@ -17,6 +17,7 @@ export default function GeneratedReport() {
     insights,
     allocationTarget,
     allocationPreset,
+    items,
   } = usePortfolio();
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -30,14 +31,31 @@ export default function GeneratedReport() {
       insights: insights ?? [],
       allocationTarget,
       allocationPreset,
+      items,
     });
-  }, [summary, allocation, concentration, milestones, insights, allocationTarget, allocationPreset]);
+  }, [summary, allocation, concentration, milestones, insights, allocationTarget, allocationPreset, items]);
 
-  const downloadAsPDF = () => {
-    const w = iframeRef.current?.contentWindow;
-    if (!w) return;
-    w.focus();
-    w.print();
+  const downloadAsDoc = () => {
+    const textContent = buildPortfolioReportText({
+      summary,
+      allocation,
+      concentration,
+      milestones: milestones ?? [],
+      insights: insights ?? [],
+      allocationTarget,
+      allocationPreset,
+      items,
+    });
+
+    const blob = new Blob([textContent], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mintdfolio-report-${new Date().toISOString().split('T')[0]}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   if (!isDataLoaded) {
@@ -45,7 +63,7 @@ export default function GeneratedReport() {
       <main className="min-h-[60vh] flex items-center justify-center p-6">
         <Seo
           title="Portfolio Report | mintdfolio"
-          description="Generate a detailed portfolio analysis report and download it as a PDF."
+          description="Generate a detailed portfolio analysis report and download it as a document."
           canonicalPath="/report/generated"
         />
 
@@ -67,7 +85,7 @@ export default function GeneratedReport() {
     <main className="p-4 lg:p-6 max-w-6xl mx-auto">
       <Seo
         title="Portfolio Report | mintdfolio"
-        description="View your portfolio analysis report and download it as a PDF."
+        description="View your portfolio analysis report and download it as a document."
         canonicalPath="/report/generated"
       />
 
@@ -81,9 +99,9 @@ export default function GeneratedReport() {
           </Button>
         </Link>
 
-        <Button onClick={downloadAsPDF} size="sm">
+        <Button onClick={downloadAsDoc} size="sm">
           <Download className="w-4 h-4 mr-2" />
-          Download as PDF
+          Download as .doc
         </Button>
       </header>
 

@@ -1,4 +1,4 @@
-import { AllocationBreakdown, AllocationPreset, AllocationTarget, ConcentrationRisk, Insight, PortfolioSummary, ProfitMilestone } from "@/lib/types";
+import { AllocationBreakdown, AllocationPreset, AllocationTarget, ConcentrationRisk, Insight, PortfolioItem, PortfolioSummary, ProfitMilestone } from "@/lib/types";
 
 type BuildPortfolioReportHtmlParams = {
   summary: PortfolioSummary | null;
@@ -8,6 +8,7 @@ type BuildPortfolioReportHtmlParams = {
   insights: Insight[];
   allocationTarget: AllocationTarget;
   allocationPreset: AllocationPreset;
+  items: PortfolioItem[];
 };
 
 export function buildPortfolioReportHtml({
@@ -18,7 +19,22 @@ export function buildPortfolioReportHtml({
   insights,
   allocationTarget,
   allocationPreset,
+  items,
 }: BuildPortfolioReportHtmlParams) {
+  // Get specific portfolio items for personalized narratives
+  const topGainers = [...items].sort((a, b) => b.gainPercent - a.gainPercent).slice(0, 5);
+  const topLosers = [...items].filter(i => i.gainPercent < 0).sort((a, b) => a.gainPercent - b.gainPercent).slice(0, 3);
+  const biggestHoldings = [...items].sort((a, b) => b.totalMarketValue - a.totalMarketValue).slice(0, 3);
+  const sealedItems = items.filter(i => i.assetType === 'Sealed');
+  const slabItems = items.filter(i => i.assetType === 'Slab');
+  const rawItems = items.filter(i => i.assetType === 'Raw Card');
+  const newerSets = items.filter(i => {
+    const name = i.productName.toLowerCase();
+    return name.includes('151') || name.includes('obsidian') || name.includes('paldea') || 
+           name.includes('prismatic') || name.includes('surging') || name.includes('twilight') ||
+           name.includes('shrouded') || name.includes('stellar') || name.includes('2024') || name.includes('2023');
+  });
+
   const getCollectorType = () => {
     if (!allocation) return { type: "Balanced Collector", description: "" };
 
@@ -26,36 +42,35 @@ export function buildPortfolioReportHtml({
     const slabs = allocation.slabs.percent;
     const raw = allocation.rawCards.percent;
 
+    // Build specific description based on their holdings
+    const topSealedProducts = sealedItems.slice(0, 3).map(i => i.productName).join(', ');
+    const topSlabs = slabItems.slice(0, 3).map(i => i.productName).join(', ');
+
     if (sealed >= 50) {
       return {
         type: "The Vault Keeper",
-        description:
-          "You're a patient investor who believes in the long game. Your heavy sealed allocation shows you understand the power of scarcity and time. You're the type who sees an ETB and thinks \"future vintage.\"",
+        description: `With ${sealed.toFixed(0)}% of your portfolio in sealed products${topSealedProducts ? ` like ${topSealedProducts}` : ''}, you're clearly playing the long game. You understand that sealed products only become more scarce over time.`,
       };
     } else if (slabs >= 50) {
       return {
         type: "The Trophy Hunter",
-        description:
-          "You chase the grails. Your slab-heavy portfolio shows you value authenticated excellence over quantity. Each piece in your collection tells a story of pursuit and triumph.",
+        description: `Your collection is ${slabs.toFixed(0)}% graded cards${topSlabs ? `, featuring pieces like ${topSlabs}` : ''}. You've chosen authenticated excellence over quantity, and each slab represents a deliberate choice.`,
       };
     } else if (raw >= 50) {
       return {
         type: "The Volume Player",
-        description:
-          "You play the numbers game with raw cards, finding value where others overlook. You're nimble, quick to move, and always hunting for the next undervalued gem.",
+        description: `With ${raw.toFixed(0)}% in raw cards across ${rawItems.length} holdings, you're hunting for value and grading candidates. You see opportunity where others see risk.`,
       };
     } else if (sealed >= 30 && slabs >= 30) {
       return {
         type: "The Strategic Diversifier",
-        description:
-          "You've built a fortress portfolio with both sealed potential and graded security. You understand that balance isn't boring—it's smart.",
+        description: `Your balanced ${sealed.toFixed(0)}% sealed / ${slabs.toFixed(0)}% graded split shows sophisticated thinking. You've built a fortress with both long-term appreciation potential and liquid, authenticated assets.`,
       };
     }
 
     return {
       type: "The Balanced Collector",
-      description:
-        "You appreciate all aspects of the hobby and your portfolio reflects that wisdom. You're not putting all your eggs in one basket, and that's a strength.",
+      description: `With ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% graded, and ${raw.toFixed(0)}% raw across ${items.length} total holdings, you're not putting all your eggs in one basket. That's a strength.`,
     };
   };
 
@@ -67,58 +82,58 @@ export function buildPortfolioReportHtml({
     const totalGainPercent = summary?.unrealizedPLPercent || 0;
     const topHits = milestones.filter((m) => m.item.gainPercent >= 100);
 
-    // Collector type narrative
+    // Build specific item references
+    const topGainerName = topGainers[0]?.productName || '';
+    const topGainerPercent = topGainers[0]?.gainPercent || 0;
+    const biggestPosition = biggestHoldings[0]?.productName || '';
+    const biggestPositionValue = biggestHoldings[0]?.totalMarketValue || 0;
+
+    // Collector type narrative - more specific based on holdings
     let collectorNarrative = "";
     if (sealed >= 50) {
-      collectorNarrative = `When I say "Vault Keeper," I don't mean passive. I mean <em>intentional</em>.<br><br>
-A heavy sealed allocation tells me you understand something most people don't: time is the real multiplier in Pokémon. You're not chasing week-to-week price action. You're betting on scarcity, nostalgia, and the fact that Pokémon has a 25-year history of rewarding patience.<br><br>
-You're the type of collector who can look at an ETB or a premium collection and already see it as future vintage — not because it's guaranteed, but because you're comfortable holding through boredom, sideways movement, and market noise.<br><br>
-That mindset is a strength. But it also comes with trade-offs — and we'll talk about those honestly in this report.`;
+      const sealedCount = sealedItems.length;
+      const avgSealedValue = sealedItems.reduce((sum, i) => sum + i.totalMarketValue, 0) / (sealedCount || 1);
+      collectorNarrative = `Your ${sealedCount} sealed positions averaging $${avgSealedValue.toLocaleString()} each tell me you're building for the future, not chasing short-term gains.<br><br>
+${sealedItems.length > 0 ? `Products like <strong>${sealedItems[0].productName}</strong>${sealedItems[1] ? ` and <strong>${sealedItems[1].productName}</strong>` : ''} show you understand that Pokémon sealed has a 25-year track record of rewarding patience.` : ''}<br><br>
+You're comfortable holding through market noise. That's a real edge — but it comes with trade-offs we'll discuss.`;
     } else if (slabs >= 50) {
-      collectorNarrative = `Trophy Hunters don't collect — they <em>curate</em>.<br><br>
-Your slab-heavy portfolio tells me you value authenticated excellence over quantity. Every graded card in your collection represents a deliberate choice: the hunt, the evaluation, the commitment to quality.<br><br>
-This approach has real advantages. Graded cards offer liquidity, authenticity, and a clear market. You can exit positions faster than sealed holders, and you have proof of condition that raw collectors don't.<br><br>
-The trade-off? You're paying a premium for that security, and you may miss the explosive upside that comes from sealed appreciation. But that's a conscious choice — and this report will help you optimize around it.`;
+      const avgGrade = slabItems.filter(i => i.grade).length > 0 ? 'graded' : 'authenticated';
+      collectorNarrative = `You've assembled ${slabItems.length} ${avgGrade} pieces, each representing a deliberate choice.<br><br>
+${slabItems.length > 0 ? `Holdings like <strong>${slabItems[0].productName}</strong>${slabItems[1] ? ` and <strong>${slabItems[1].productName}</strong>` : ''} show you value authenticated excellence.` : ''}<br><br>
+Graded cards offer liquidity and proof of condition. You can exit faster than sealed holders. The trade-off? You're paying a premium for that security.`;
     } else if (raw >= 50) {
-      collectorNarrative = `Volume Players see what others miss.<br><br>
-Your raw-heavy portfolio tells me you're comfortable with uncertainty. You're hunting for mispriced cards, grading candidates, and opportunities that require a trained eye to spot.<br><br>
-This approach offers maximum flexibility. You can pivot quickly, capitalize on market inefficiencies, and your upside on any single card is theoretically unlimited if you grade the right one.<br><br>
-The risk? Raw cards carry condition uncertainty, and liquidity can be harder. But you already know that — and this report will help you manage those trade-offs.`;
+      collectorNarrative = `Your ${rawItems.length} raw card positions show you're comfortable with uncertainty — hunting for grading candidates and mispriced opportunities.<br><br>
+${rawItems.length > 0 ? `Cards like <strong>${rawItems[0].productName}</strong>${rawItems[1] ? ` and <strong>${rawItems[1].productName}</strong>` : ''} could be PSA 10 candidates waiting to unlock value.` : ''}<br><br>
+Maximum flexibility, maximum upside potential. The risk? Condition uncertainty and potentially harder liquidity.`;
     } else {
-      collectorNarrative = `Balanced collectors often get underestimated — but I see it differently.<br><br>
-A diversified portfolio isn't boring. It's <em>resilient</em>. You've spread your conviction across sealed appreciation, graded security, and raw flexibility.<br><br>
-This means you can weather different market conditions. When sealed stagnates, your graded cards provide liquidity. When raw prices spike, you're positioned to benefit. You're not betting everything on one thesis.<br><br>
-The trade-off is that you may not capture the full upside of any single category. But for most collectors, that's the right call — and this report will help you fine-tune your balance.`;
+      collectorNarrative = `Your diversified approach across ${items.length} holdings — ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% graded, ${raw.toFixed(0)}% raw — shows resilience over speculation.<br><br>
+${biggestPosition ? `Your largest position, <strong>${biggestPosition}</strong> at $${biggestPositionValue.toLocaleString()}, anchors the portfolio` : 'Your spread-out positions mean you can weather different market conditions'}.<br><br>
+When sealed stagnates, graded provides liquidity. When raw spikes, you're positioned. You're not betting everything on one thesis.`;
     }
 
-    // Overview narrative
+    // Overview narrative - include specific numbers
     const overviewNarrative =
       totalGainPercent >= 0
-        ? `At a glance, this portfolio is doing its job.<br><br>
-A ${totalGainPercent >= 10 ? "strong " : ""}${totalGainPercent.toFixed(1)}% unrealized return tells me two things at once:<br><br>
-<strong>1.</strong> You're positioned correctly long-term.<br>
-<strong>2.</strong> You're not overexposed to hype-driven, short-term spikes.<br><br>
-That's a good thing — even if it doesn't feel exciting.<br><br>
-The total value reflects real conviction capital, not flipping capital. This isn't money that needs to move tomorrow, and that gives you leverage most collectors don't have.`
-        : `Let's be honest: seeing red isn't fun.<br><br>
-A ${Math.abs(totalGainPercent).toFixed(1)}% unrealized loss tells me you're in drawdown territory. But here's what matters more than the number: <em>why</em> you're down and <em>what</em> you're holding.<br><br>
-If your positions are fundamentally sound — sealed products from recent sets, quality graded cards, undervalued raw gems — then this drawdown is temporary. Markets don't move in straight lines.<br><br>
-The question isn't whether you're down. It's whether your thesis is still intact. And this report will help you evaluate that.`;
+        ? `Your $${(summary?.totalMarketValue || 0).toLocaleString()} portfolio is up ${totalGainPercent.toFixed(1)}% — that's $${(summary?.unrealizedPL || 0).toLocaleString()} in unrealized gains.<br><br>
+${topGainerName ? `<strong>${topGainerName}</strong> leads the way at +${topGainerPercent.toFixed(0)}%.` : ''}<br><br>
+${summary?.holdingsInProfitPercent ? `${summary.holdingsInProfitPercent.toFixed(0)}% of your ${items.length} positions are in profit.` : ''} This isn't hype money — it's conviction capital built for the long term.`
+        : `Let's be honest: a ${Math.abs(totalGainPercent).toFixed(1)}% unrealized loss (-$${Math.abs(summary?.unrealizedPL || 0).toLocaleString()}) doesn't feel good.<br><br>
+${topLosers.length > 0 ? `<strong>${topLosers[0].productName}</strong> at ${topLosers[0].gainPercent.toFixed(0)}% is your biggest drawdown.` : ''}<br><br>
+The question isn't whether you're down — it's whether your thesis is still intact. Markets don't move in straight lines.`;
 
     // Health score narrative
     let healthNarrative = "";
     if (healthScore >= 80) {
-      healthNarrative = `A score of ${healthScore} tells me this portfolio is <em>well-constructed</em>.<br><br>
-You have strong allocation balance, reasonable liquidity, controlled concentration, and disciplined profit-taking. This is the profile of a collector who thinks like an investor.`;
+      healthNarrative = `A ${healthScore} tells me this portfolio is well-constructed across ${items.length} holdings.<br><br>
+Strong allocation balance, reasonable liquidity, controlled concentration. This is the profile of a collector who thinks like an investor.`;
     } else if (healthScore >= 60) {
-      healthNarrative = `A ${healthScore} tells me this: You have strong conviction and solid positioning — but the portfolio is tilted, not optimized.<br><br>
-And that's not inherently bad.<br><br>
-The score isn't punishing you for believing in your strategy. It's simply reflecting that high-conviction portfolios trade balance for upside.<br><br>
-If your thesis plays out, this score will rise naturally. If the market stagnates, the current tilt becomes the drag.`;
+      healthNarrative = `A ${healthScore} reflects solid positioning with some tilt — not optimized, but not reckless either.<br><br>
+${concentration && concentration.top1Percent > 15 ? `Your top position (${concentration.top1Name}) at ${concentration.top1Percent.toFixed(0)}% is worth monitoring.` : 'Your diversification is reasonable.'}<br><br>
+High-conviction portfolios trade balance for upside. If your thesis plays out, this score rises naturally.`;
     } else {
-      healthNarrative = `A ${healthScore} tells me there's work to do — but it's not a crisis.<br><br>
-Lower health scores typically mean one of a few things: heavy concentration in one category, limited liquidity, or positions that have drawn down significantly.<br><br>
-The good news? These are all addressable. This report will give you specific steps to improve your score without abandoning your core thesis.`;
+      healthNarrative = `A ${healthScore} means there's work to do — but it's not a crisis.<br><br>
+${concentration && concentration.top1Percent > 25 ? `Heavy concentration in ${concentration.top1Name} (${concentration.top1Percent.toFixed(0)}% of portfolio) is the main factor.` : 'Limited diversification or significant drawdowns are weighing on the score.'}<br><br>
+The good news? These are addressable without abandoning your thesis.`;
     }
 
     // Allocation narrative - with sealed risk warning
@@ -126,89 +141,100 @@ The good news? These are all addressable. This report will give you specific ste
     const isLowSealed = sealed < 20;
     const isSealedSmallest = sealed < slabs && sealed < raw;
 
-    // Add sealed risk warning if applicable
     let sealedWarning = "";
     if (isLowSealed) {
-      sealedWarning = `<strong style="color: #f59e0b;">⚠️ Risk Alert:</strong> Your sealed allocation is below 20%. We recommend that sealed take up a substantial part of any collection as it is historically the safest asset to hold. Sealed products — especially booster boxes and ETBs — have shown the most consistent long-term appreciation because they represent finite supply that only decreases over time.<br><br>`;
+      sealedWarning = `<strong style="color: #f59e0b;">⚠️ Risk Alert:</strong> Your sealed allocation is only ${sealed.toFixed(0)}%. Historically, sealed products have shown the most consistent long-term appreciation because they represent finite, decreasing supply.<br><br>`;
     } else if (isSealedSmallest) {
-      sealedWarning = `<strong style="color: #f59e0b;">⚠️ Note:</strong> Sealed is currently your smallest category. While your approach has merits, consider that sealed products have historically provided the most reliable long-term returns. Booster boxes and ETBs in particular are never reprinted, making them natural stores of value.<br><br>`;
+      sealedWarning = `<strong style="color: #f59e0b;">⚠️ Note:</strong> Sealed is your smallest category at ${sealed.toFixed(0)}%. Consider that booster boxes and ETBs are never reprinted — they're natural stores of value.<br><br>`;
     }
 
     if (sealed >= 70) {
-      allocationNarrative = `On paper, this allocation doesn't look balanced.<br><br>
-${sealed.toFixed(0)}% sealed is aggressive — no sugarcoating that.<br><br>
-But balance isn't about symmetry. It's about <em>alignment with intent</em>.<br><br>
-This portfolio is balanced for a high-conviction sealed strategy because:<br>
-<strong>•</strong> Your sealed exposure is spread across multiple products, not one bet<br>
-<strong>•</strong> You still maintain graded and raw exposure for liquidity and flexibility<br>
-<strong>•</strong> You're not relying on sealed to fund short-term expenses<br><br>
-In other words: This isn't reckless concentration — it's <em>deliberate</em> concentration.<br><br>
-That said, there's a difference between conviction and fragility, and that's where the next sections matter.`;
+      allocationNarrative = `${sealed.toFixed(0)}% sealed is aggressive — let's not sugarcoat that.<br><br>
+${sealedItems.length > 0 ? `Your sealed exposure spans ${sealedItems.length} products${sealedItems.slice(0, 2).map(i => i.productName).join(', ') ? `, including <strong>${sealedItems.slice(0, 2).map(i => i.productName).join('</strong> and <strong>')}</strong>` : ''}.` : ''}<br><br>
+This isn't reckless concentration — it's deliberate if your sealed is spread across multiple products. But there's a difference between conviction and fragility.`;
     } else if (slabs >= 70) {
-      allocationNarrative = `${sealedWarning}A ${slabs.toFixed(0)}% graded allocation is a strong statement.<br><br>
-You've prioritized authenticated, liquid assets over long-term sealed plays or speculative raw cards. That's a defensive posture — and there's nothing wrong with that.<br><br>
-The upside: you can exit positions quickly if needed. The downside: you may be paying a premium for that security, and sealed products often outperform over multi-year horizons.<br><br>
-This allocation makes sense if you value flexibility over maximum upside. Let's make sure the rest of your portfolio supports that goal.`;
+      allocationNarrative = `${sealedWarning}${slabs.toFixed(0)}% graded is a strong defensive posture.<br><br>
+${slabItems.length > 0 ? `Cards like <strong>${slabItems[0].productName}</strong> give you liquidity and authenticated value.` : ''}<br><br>
+The upside: quick exits if needed. The downside: you may be paying a premium for security while sealed could outperform long-term.`;
     } else {
-      allocationNarrative = `${sealedWarning}Your current mix of ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% graded, and ${raw.toFixed(0)}% raw reflects a balanced approach.<br><br>
-You're not betting everything on one category, which means you can weather different market conditions. Sealed gives you long-term upside, graded provides liquidity and authenticity, and raw offers flexibility.<br><br>
-The trade-off is that you won't capture the full explosive upside if one category massively outperforms. But for most collectors, this balanced approach is the smarter play.`;
+      allocationNarrative = `${sealedWarning}Your ${sealed.toFixed(0)}% sealed / ${slabs.toFixed(0)}% graded / ${raw.toFixed(0)}% raw mix is balanced.<br><br>
+This means you can weather different market conditions. You won't capture the full explosive upside if one category massively outperforms, but for most collectors, this is the smarter play.`;
     }
 
-    // Top performers narrative
-    const topPerformersNarrative =
-      topHits.length > 0
-        ? `A 100%+ gain isn't a victory lap — it's a <em>decision point</em>.<br><br>
-Big winners are dangerous, not because they're bad, but because they trick you into thinking "I don't need a plan anymore."<br><br>
-Historically, this is where disciplined collectors do one of three things:<br><br>
-<strong>1.</strong> Sell half to lock in original capital<br>
-<strong>2.</strong> Rotate profits into underweighted categories (graded or raw)<br>
-<strong>3.</strong> Hold intentionally because the item has structural scarcity<br><br>
-The key word is <em>intentional</em>.<br><br>
-If you're holding, you should be able to explain why — not just hope it goes higher.`
-        : `You don't have any 100%+ gainers yet — and that's okay.<br><br>
-Patience is the name of the game in Pokémon collecting. Most successful portfolios took years to show their best returns.<br><br>
-The key is to stay positioned in fundamentally sound products and let time do the work.`;
+    // Top performers narrative - focus on SELLING to reduce risk and profit milestones
+    let topPerformersNarrative = "";
+    if (topHits.length > 0) {
+      const specificWinners = topHits.slice(0, 3).map(m => `<strong>${m.item.productName}</strong> (+${m.item.gainPercent.toFixed(0)}%)`).join(', ');
+      topPerformersNarrative = `You have ${topHits.length} position${topHits.length > 1 ? 's' : ''} with 100%+ gains: ${specificWinners}.<br><br>
+<strong>This is where most collectors mess up.</strong> Big winners feel great, but they also increase your concentration risk. Consider:<br><br>
+<strong>• Sell some to reduce risk:</strong> Taking partial profits on ${topHits[0].item.productName} would lock in gains and reduce position-specific exposure.<br>
+<strong>• Rotate into underweighted categories:</strong> Use profits to balance your allocation.<br><br>
+<strong>Profit Milestones to Think About:</strong><br>
+• <strong>100% gain</strong> — First milestone. Consider selling enough to recoup your initial cost.<br>
+• <strong>200% gain</strong> — You've tripled. Trimming here lets you "play with house money."<br>
+• <strong>5x (400%+)</strong> — Rare territory. Strongly consider locking in significant profits.<br><br>
+${newerSets.length > 0 ? `<strong>Note on newer sets:</strong> ${newerSets.slice(0, 2).map(i => i.productName).join(', ')} may have higher ceilings — consider letting some runners run.` : ''}`;
+    } else {
+      topPerformersNarrative = `You don't have any 100%+ gainers yet — that's okay.<br><br>
+Patience is the game. Most successful portfolios took years to show their best returns.<br><br>
+<strong>Your profit milestones ahead:</strong><br>
+• <strong>100% gain</strong> — First target. Consider selling enough to recoup initial cost.<br>
+• <strong>200% gain</strong> — Triple your money. Trimming here lets you "play with house money."<br>
+• <strong>5x (400%+)</strong> — Exceptional. Lock in significant profits when you get here.<br><br>
+Stay positioned in fundamentally sound products and let time work.`;
+    }
 
-    // Strengths narrative
-    const strengthsNarrative = `The biggest strength here isn't performance — it's <em>restraint</em>.<br><br>
-You haven't panic-sold drawdowns. You haven't over-rotated into whatever's trending. You've stayed consistent.<br><br>
-That matters more than timing.<br><br>
-Any underweights aren't failures — they're opportunities. You already did the hard part by building conviction capital.`;
+    // Strengths narrative - specific to their portfolio
+    const strengthsNarrative = `${summary && summary.holdingsInProfitPercent > 60 ? `<strong>${summary.holdingsInProfitPercent.toFixed(0)}% of your holdings are in profit</strong> — that's disciplined buying.` : ''}<br><br>
+${items.length >= 10 ? `With ${items.length} positions, you have real diversification, not just a few concentrated bets.` : `You've kept your portfolio focused on ${items.length} positions — easier to monitor and manage.`}<br><br>
+${topGainers.length > 0 && topGainers[0].gainPercent > 50 ? `<strong>${topGainers[0].productName}</strong> at +${topGainers[0].gainPercent.toFixed(0)}% shows you can pick winners.` : 'You haven\'t panic-sold drawdowns. You\'ve stayed consistent.'}<br><br>
+Any underweights aren't failures — they're opportunities for your next purchases.`;
 
-    // Risks narrative
-    const risksNarrative = `There are three real risks in this portfolio — and none of them are about Pokémon collapsing.<br><br>
-<strong>Risk #1: Liquidity Compression</strong><br>
-$${sealed >= 50 ? "Sealed performs best over long timelines, but it's slower to exit. If you ever need liquidity quickly, you'll feel that friction." : "Your current mix has reasonable liquidity, but keep an eye on how quickly you could exit if needed."}<br><br>
-<strong>Risk #2: Opportunity Cost</strong><br>
-$${sealed >= 60 ? `Being ${sealed.toFixed(0)}%+ sealed means you may miss tactical opportunities in graded or raw cards when markets misprice them.` : "Your diversified approach minimizes this risk, but stay alert to opportunities across all categories."}<br><br>
-<strong>Risk #3: Emotional Over-Attachment</strong><br>
-High-conviction portfolios can make it harder to trim winners objectively — especially items you love.<br><br>
-None of these invalidate the strategy. They just require awareness.`;
+    // Risks narrative - specific to their portfolio
+    const risksNarrative = `<strong>Risk #1: ${concentration && concentration.top1Percent > 20 ? 'Concentration' : 'Liquidity'}</strong><br>
+${concentration && concentration.top1Percent > 20 ? `<strong>${concentration.top1Name}</strong> is ${concentration.top1Percent.toFixed(0)}% of your portfolio. If it drops 50%, that's a ${(concentration.top1Percent * 0.5).toFixed(0)}% hit to your total value.` : sealed >= 50 ? 'Sealed performs best over long timelines, but it\'s slower to exit. If you ever need liquidity quickly, you\'ll feel that friction.' : 'Your current mix has reasonable liquidity, but keep an eye on how quickly you could exit if needed.'}<br><br>
+<strong>Risk #2: ${topLosers.length > 0 ? 'Drawdown Positions' : 'Opportunity Cost'}</strong><br>
+${topLosers.length > 0 ? `<strong>${topLosers[0].productName}</strong> is down ${Math.abs(topLosers[0].gainPercent).toFixed(0)}%. Decide: hold for recovery or tax-loss harvest?` : sealed >= 60 ? `Being ${sealed.toFixed(0)}%+ sealed means you may miss tactical opportunities in graded or raw when markets misprice them.` : 'Your diversified approach minimizes this, but stay alert to opportunities.'}<br><br>
+<strong>Risk #3: Time Horizon</strong><br>
+What's your actual timeline? ${sealed >= 40 ? 'Sealed requires patience — 3-5+ years minimum for most products to appreciate meaningfully.' : 'Make sure your asset mix matches when you actually need the money.'}`;
 
-    // Action plan narrative
-    const actionNarrative = `If this were my portfolio, I wouldn't rush.<br><br>
-I'd rebalance slowly and intentionally, using strength — not fear.<br><br>
-That might look like:<br><br>
-<strong>•</strong> Trimming 5–10% of overweighted categories only from oversized winners<br>
-<strong>•</strong> Redirecting that capital into underweighted positions<br>
-<strong>•</strong> Building liquidity gradually, not all at once<br><br>
-The goal isn't to abandon your thesis. It's to let your winners <em>fund flexibility</em>.`;
+    // Action plan narrative - specific based on allocation preset
+    const presetName = allocationPreset === 'conservative' ? 'The Investor (Conservative)' : 
+                       allocationPreset === 'aggressive' ? 'The Purist (Aggressive)' : 
+                       allocationPreset === 'balanced' ? 'The Hybrid (Balanced)' : 'Custom';
+    
+    const actionNarrative = `Based on your <strong>${presetName}</strong> target allocation (${allocationTarget.sealed}% Sealed / ${allocationTarget.slabs}% Graded / ${allocationTarget.rawCards}% Raw):<br><br>
+${Math.abs(sealed - allocationTarget.sealed) > 10 ? `• You're ${sealed > allocationTarget.sealed ? 'over' : 'under'}weight in sealed by ${Math.abs(sealed - allocationTarget.sealed).toFixed(0)}%` : '• Your sealed allocation is on target'}<br>
+${Math.abs(slabs - allocationTarget.slabs) > 10 ? `• You're ${slabs > allocationTarget.slabs ? 'over' : 'under'}weight in graded by ${Math.abs(slabs - allocationTarget.slabs).toFixed(0)}%` : '• Your graded allocation is on target'}<br>
+${Math.abs(raw - allocationTarget.rawCards) > 10 ? `• You're ${raw > allocationTarget.rawCards ? 'over' : 'under'}weight in raw by ${Math.abs(raw - allocationTarget.rawCards).toFixed(0)}%` : '• Your raw allocation is on target'}<br><br>
+<strong>Don't rush rebalancing.</strong> Use strength, not fear. Trim from oversized winners, redirect capital gradually, and let your winners fund flexibility.`;
 
     // Rebalancing narrative
-    const rebalanceNarrative = `If you moved closer to your target allocation over time:<br><br>
-<strong>•</strong> Your health score improves (less concentration risk)<br>
-<strong>•</strong> Your liquidity increases<br>
-<strong>•</strong> Your downside becomes more manageable in flat markets<br><br>
+    const rebalanceNarrative = `If you moved closer to your ${presetName} target over time:<br><br>
+• Your health score improves (less concentration risk)<br>
+• Your liquidity increases<br>
+• Your downside becomes more manageable in flat markets<br><br>
 The trade-off? You may slightly cap upside if one category outperforms everything else.<br><br>
-That's the deal. There's no free lunch — only intentional trade-offs.`;
+<strong>Note:</strong> Your action plan changes based on your target allocation. Conservative collectors get different advice than aggressive ones — the simulator on the Rebalance page lets you experiment.`;
 
-    // Closing narrative
-    const closingNarrative = `This is a strong portfolio.<br><br>
-Not because it's perfect — but because it's <em>honest</em>.<br><br>
-You know what you believe in. You're not chasing noise. And you're already ahead of most collectors just by having a framework.<br><br>
-The next level isn't changing your thesis.<br><br>
-It's <em>refining execution</em>.`;
+    // Closing narrative - SPECIFIC to their portfolio
+    let closingNarrative = "";
+    if (topGainers.length > 0 && topGainers[0].gainPercent > 100) {
+      closingNarrative = `<strong>Your ${topHits.length} position${topHits.length > 1 ? 's' : ''} with 100%+ gains (${topHits.slice(0, 2).map(m => m.item.productName).join(', ')}) ${topHits.length > 1 ? 'are' : 'is'} the highlight.</strong><br><br>
+Consider taking some profits — at least enough to recoup your initial investment. Then you're playing with house money.<br><br>
+${concentration && concentration.top1Percent > 20 ? `Watch your concentration in <strong>${concentration.top1Name}</strong>. Trimming here could reduce risk without abandoning your thesis.` : `Your diversification across ${items.length} positions is solid.`}<br><br>
+You know what you believe in. You're not chasing noise. The next level isn't changing your thesis — it's refining execution.`;
+    } else if (topLosers.length > 0 && topLosers[0].gainPercent < -20) {
+      closingNarrative = `<strong>Let's address the elephant:</strong> ${topLosers.slice(0, 2).map(i => i.productName).join(' and ')} ${topLosers.length > 1 ? 'are' : 'is'} in significant drawdown.<br><br>
+Decide if your thesis still holds. If yes, this could be accumulation territory. If not, consider tax-loss harvesting before year-end.<br><br>
+${items.filter(i => i.gainPercent > 0).length > 0 ? `On the bright side, ${items.filter(i => i.gainPercent > 0).length} of your ${items.length} positions are in profit. Focus on what's working.` : ''}<br><br>
+Markets cycle. Stay patient with fundamentally sound holdings.`;
+    } else {
+      closingNarrative = `Your $${(summary?.totalMarketValue || 0).toLocaleString()} portfolio across ${items.length} holdings shows thoughtful construction.<br><br>
+${biggestPosition ? `<strong>${biggestPosition}</strong> at $${biggestPositionValue.toLocaleString()} anchors your collection.` : ''}<br><br>
+${summary && summary.unrealizedPLPercent >= 0 ? `You're up ${summary.unrealizedPLPercent.toFixed(1)}% overall — not explosive, but steady progress.` : 'You\'re in drawdown, but that\'s temporary if your thesis is sound.'}<br><br>
+Keep monitoring, stay patient, and remember: the best returns in Pokémon come from holding quality products through market noise.`;
+    }
 
     return {
       collectorNarrative,
@@ -236,12 +262,12 @@ It's <em>refining execution</em>.`;
         if (sealedDiff > 0) {
           actions.push({
             title: "Increase Sealed Allocation",
-            desc: `You're ${sealedDiff.toFixed(0)}% below your target. Consider picking up some sealed products on your next purchase.`,
+            desc: `You're ${sealedDiff.toFixed(0)}% below your ${allocationTarget.sealed}% target. Consider sealed products on your next purchase.`,
           });
         } else {
           actions.push({
             title: "Consider Reducing Sealed",
-            desc: `You're ${Math.abs(sealedDiff).toFixed(0)}% above target in sealed. If you need liquidity, this could be an area to trim.`,
+            desc: `You're ${Math.abs(sealedDiff).toFixed(0)}% above your ${allocationTarget.sealed}% target. If you need liquidity, this could be an area to trim.`,
           });
         }
       }
@@ -250,12 +276,12 @@ It's <em>refining execution</em>.`;
         if (slabsDiff > 0) {
           actions.push({
             title: "Add More Graded Cards",
-            desc: `You're ${slabsDiff.toFixed(0)}% below your graded target. Authenticated cards offer both security and liquidity.`,
+            desc: `You're ${slabsDiff.toFixed(0)}% below your ${allocationTarget.slabs}% target. Authenticated cards offer security and liquidity.`,
           });
         } else {
           actions.push({
             title: "Graded Position is Heavy",
-            desc: `You're ${Math.abs(slabsDiff).toFixed(0)}% above target. Great for liquidity, but consider diversifying into other categories.`,
+            desc: `You're ${Math.abs(slabsDiff).toFixed(0)}% above your ${allocationTarget.slabs}% target. Consider diversifying into other categories.`,
           });
         }
       }
@@ -264,37 +290,38 @@ It's <em>refining execution</em>.`;
         if (rawDiff > 0) {
           actions.push({
             title: "Explore Raw Cards",
-            desc: `You're ${rawDiff.toFixed(0)}% below your raw card target. Raw cards offer flexibility and upside if you grade the right ones.`,
+            desc: `You're ${rawDiff.toFixed(0)}% below your ${allocationTarget.rawCards}% target. Raw cards offer flexibility and upside if you grade the right ones.`,
           });
         } else {
           actions.push({
             title: "Raw Exposure is High",
-            desc: `You're ${Math.abs(rawDiff).toFixed(0)}% above target in raw. Consider grading your best raw cards to protect value.`,
+            desc: `You're ${Math.abs(rawDiff).toFixed(0)}% above your ${allocationTarget.rawCards}% target. Consider grading your best raw cards.`,
           });
         }
       }
     }
 
-    // Add milestone-based actions
+    // Add milestone-based actions with specific items
     const highGainMilestones = milestones.filter((m) => m.item.gainPercent >= 100);
     if (highGainMilestones.length > 0) {
+      const topWinner = highGainMilestones[0];
       actions.push({
-        title: "Take Some Profits",
-        desc: `You have ${highGainMilestones.length} positions with 100%+ gains. Consider the "sell half" strategy to lock in your initial investment.`,
+        title: `Take Profits on ${topWinner.item.productName}`,
+        desc: `At +${topWinner.item.gainPercent.toFixed(0)}%, consider selling half to lock in $${topWinner.sellHalfProfit.toLocaleString()} profit while keeping ${topWinner.sellHalfUnitsRemaining} units.`,
       });
     }
 
     if (concentration && concentration.top1Percent > 20) {
       actions.push({
-        title: "Address Concentration Risk",
-        desc: `Your top holding (${concentration.top1Name}) is ${concentration.top1Percent.toFixed(0)}% of your portfolio. Consider spreading risk across more positions.`,
+        title: `Reduce ${concentration.top1Name} Concentration`,
+        desc: `At ${concentration.top1Percent.toFixed(0)}% of your portfolio, consider trimming to reduce position-specific risk.`,
       });
     }
 
     if (actions.length === 0) {
       actions.push({
         title: "Stay the Course",
-        desc: "Your portfolio is well-aligned with your targets. Keep monitoring the market and maintain your current strategy.",
+        desc: "Your portfolio is well-aligned with your targets. Keep monitoring and maintain your current strategy.",
       });
     }
 
@@ -322,6 +349,11 @@ It's <em>refining execution</em>.`;
   const totalGain = summary?.unrealizedPL || 0;
   const totalGainPercent = summary?.unrealizedPLPercent || 0;
   const healthScore = summary?.healthScore || 0;
+
+  // Preset info for report card
+  const presetLabel = allocationPreset === 'conservative' ? 'The Investor (Conservative)' : 
+                      allocationPreset === 'aggressive' ? 'The Purist (Aggressive)' : 
+                      allocationPreset === 'balanced' ? 'The Hybrid (Balanced)' : 'Custom';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -629,6 +661,33 @@ It's <em>refining execution</em>.`;
       margin: 16px 0;
     }
 
+    .target-allocation-card {
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 24px;
+    }
+
+    .target-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #a78bfa;
+      margin-bottom: 8px;
+    }
+
+    .target-info {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .target-note {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
     .closing-section {
       background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(129, 140, 248, 0.1));
       border: 1px solid rgba(139, 92, 246, 0.3);
@@ -715,12 +774,12 @@ It's <em>refining execution</em>.`;
         • Liquidity mix – how easily positions can be exited if needed<br>
         • Concentration risk – how much of the portfolio is exposed to one thesis<br>
         • Drawdown exposure – how many positions are deep red<br>
-        • Profit discipline – whether large winners are being managed intentionally</p>
+        • Profit discipline – whether large winners are being managed</p>
         ${narratives.healthNarrative}
       </div>
     </div>
     
-    <!-- Allocation Breakdown -->
+    <!-- Allocation Breakdown with Target -->
     <div class="section">
       <h2 class="section-title">Current Allocation</h2>
       <div class="allocation-bar">
@@ -734,9 +793,15 @@ It's <em>refining execution</em>.`;
         <div class="legend-item"><div class="legend-dot" style="background: #f59e0b"></div>Raw ($${(allocation?.rawCards.value || 0).toLocaleString()})</div>
       </div>
       
-      <div style="margin-top: 24px; padding: 16px; background: rgba(15, 23, 42, 0.4); border-radius: 10px;">
-        <p style="font-size: 14px; color: #94a3b8;">Your current strategy: <strong style="color: #fff;">${allocationPreset.charAt(0).toUpperCase() + allocationPreset.slice(1)}</strong></p>
-        <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Target: ${allocationTarget.sealed}% Sealed / ${allocationTarget.slabs}% Graded / ${allocationTarget.rawCards}% Raw</p>
+      <!-- Target Allocation Card -->
+      <div class="target-allocation-card">
+        <div class="target-title">Your Target Allocation: ${presetLabel}</div>
+        <div class="target-info">
+          <strong>${allocationTarget.sealed}%</strong> Sealed / <strong>${allocationTarget.slabs}%</strong> Graded / <strong>${allocationTarget.rawCards}%</strong> Raw
+        </div>
+        <div class="target-note">
+          💡 Your action plan is customized based on this target. Different allocation strategies (Conservative, Balanced, Aggressive, Custom) will generate different recommendations.
+        </div>
       </div>
       
       <div class="narrative-block">
@@ -752,7 +817,7 @@ It's <em>refining execution</em>.`;
       ${topHits.map(hit => `
         <div class="hit-item">
           <span class="hit-name">${hit.item.productName}</span>
-          <span class="hit-gain">+${hit.milestone}%+</span>
+          <span class="hit-gain">+${hit.item.gainPercent.toFixed(0)}%</span>
         </div>
       `).join('')}
       
@@ -805,7 +870,7 @@ It's <em>refining execution</em>.`;
       ${generateActionPlan()}
       
       <div class="narrative-block">
-        <div class="narrative-title">How I'd Actually Execute This (Not Theoretical)</div>
+        <div class="narrative-title">How I'd Actually Execute This</div>
         ${narratives.actionNarrative}
       </div>
     </div>
@@ -821,7 +886,7 @@ It's <em>refining execution</em>.`;
     <!-- My Takeaway (Closing) -->
     <div class="section closing-section">
       <h2 class="section-title">My Takeaway</h2>
-      <div class="narrative-block" style="border-left: none; text-align: center; max-width: 600px; margin: 0 auto;">
+      <div class="narrative-block" style="border-left: none; text-align: left; max-width: 600px; margin: 0 auto;">
         ${narratives.closingNarrative}
       </div>
     </div>
@@ -833,4 +898,264 @@ It's <em>refining execution</em>.`;
   </div>
 </body>
 </html>`;
+}
+
+// Generate plain text report for .doc download
+export function buildPortfolioReportText({
+  summary,
+  allocation,
+  concentration,
+  milestones,
+  insights,
+  allocationTarget,
+  allocationPreset,
+  items,
+}: BuildPortfolioReportHtmlParams): string {
+  const topGainers = [...items].sort((a, b) => b.gainPercent - a.gainPercent).slice(0, 5);
+  const topLosers = [...items].filter(i => i.gainPercent < 0).sort((a, b) => a.gainPercent - b.gainPercent).slice(0, 3);
+  const biggestHoldings = [...items].sort((a, b) => b.totalMarketValue - a.totalMarketValue).slice(0, 5);
+  const sealedItems = items.filter(i => i.assetType === 'Sealed');
+  const slabItems = items.filter(i => i.assetType === 'Slab');
+  const rawItems = items.filter(i => i.assetType === 'Raw Card');
+  const topHits = milestones.filter((m) => m.item.gainPercent >= 100);
+
+  const sealed = allocation?.sealed.percent || 0;
+  const slabs = allocation?.slabs.percent || 0;
+  const raw = allocation?.rawCards.percent || 0;
+
+  // Determine collector type
+  let collectorType = "The Balanced Collector";
+  if (sealed >= 50) collectorType = "The Vault Keeper";
+  else if (slabs >= 50) collectorType = "The Trophy Hunter";
+  else if (raw >= 50) collectorType = "The Volume Player";
+  else if (sealed >= 30 && slabs >= 30) collectorType = "The Strategic Diversifier";
+
+  const presetLabel = allocationPreset === 'conservative' ? 'The Investor (Conservative)' : 
+                      allocationPreset === 'aggressive' ? 'The Purist (Aggressive)' : 
+                      allocationPreset === 'balanced' ? 'The Hybrid (Balanced)' : 'Custom';
+
+  let report = `
+MINTDFOLIO PORTFOLIO ANALYSIS REPORT
+Generated on ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+
+================================================================================
+YOUR COLLECTOR PROFILE: ${collectorType.toUpperCase()}
+================================================================================
+
+`;
+
+  if (sealed >= 50) {
+    report += `With ${sealed.toFixed(0)}% of your portfolio in sealed products, you're clearly playing the long game. You understand that sealed products only become more scarce over time.
+
+${sealedItems.length > 0 ? `Your sealed holdings include: ${sealedItems.slice(0, 5).map(i => i.productName).join(', ')}` : ''}
+
+`;
+  } else if (slabs >= 50) {
+    report += `Your collection is ${slabs.toFixed(0)}% graded cards. You've chosen authenticated excellence over quantity, and each slab represents a deliberate choice.
+
+${slabItems.length > 0 ? `Key graded holdings: ${slabItems.slice(0, 5).map(i => i.productName).join(', ')}` : ''}
+
+`;
+  } else {
+    report += `Your balanced ${sealed.toFixed(0)}% sealed / ${slabs.toFixed(0)}% graded / ${raw.toFixed(0)}% raw split across ${items.length} holdings shows you're not putting all your eggs in one basket.
+
+`;
+  }
+
+  report += `
+================================================================================
+PORTFOLIO OVERVIEW
+================================================================================
+
+Total Portfolio Value: $${(summary?.totalMarketValue || 0).toLocaleString()}
+Total Cost Basis: $${(summary?.totalCostBasis || 0).toLocaleString()}
+Unrealized Profit/Loss: ${(summary?.unrealizedPL || 0) >= 0 ? '+' : ''}$${(summary?.unrealizedPL || 0).toLocaleString()} (${(summary?.unrealizedPLPercent || 0) >= 0 ? '+' : ''}${(summary?.unrealizedPLPercent || 0).toFixed(1)}%)
+Total Holdings: ${items.length}
+Holdings in Profit: ${summary?.holdingsInProfitCount || 0} (${(summary?.holdingsInProfitPercent || 0).toFixed(0)}%)
+Portfolio Health Score: ${summary?.healthScore || 0}/100
+
+`;
+
+  report += `
+================================================================================
+CURRENT ALLOCATION
+================================================================================
+
+Sealed:  ${sealed.toFixed(0)}% ($${(allocation?.sealed.value || 0).toLocaleString()}) - ${allocation?.sealed.count || 0} items
+Graded:  ${slabs.toFixed(0)}% ($${(allocation?.slabs.value || 0).toLocaleString()}) - ${allocation?.slabs.count || 0} items
+Raw:     ${raw.toFixed(0)}% ($${(allocation?.rawCards.value || 0).toLocaleString()}) - ${allocation?.rawCards.count || 0} items
+
+YOUR TARGET ALLOCATION: ${presetLabel}
+Target: ${allocationTarget.sealed}% Sealed / ${allocationTarget.slabs}% Graded / ${allocationTarget.rawCards}% Raw
+
+Note: Your action plan is customized based on this target. Different allocation strategies (Conservative, Balanced, Aggressive, Custom) will generate different recommendations.
+
+`;
+
+  report += `
+================================================================================
+TOP 5 HOLDINGS BY VALUE
+================================================================================
+
+`;
+  biggestHoldings.forEach((item, i) => {
+    report += `${i + 1}. ${item.productName}
+   Value: $${item.totalMarketValue.toLocaleString()} | Cost: $${item.totalCostBasis.toLocaleString()} | Gain: ${item.gainPercent >= 0 ? '+' : ''}${item.gainPercent.toFixed(0)}%
+   
+`;
+  });
+
+  if (topHits.length > 0) {
+    report += `
+================================================================================
+TOP PERFORMERS (100%+ GAINS)
+================================================================================
+
+`;
+    topHits.forEach((hit, i) => {
+      report += `${i + 1}. ${hit.item.productName}
+   Gain: +${hit.item.gainPercent.toFixed(0)}% | Current Value: $${hit.item.totalMarketValue.toLocaleString()}
+   
+`;
+    });
+
+    report += `
+RECOMMENDATION: Consider taking some profits on these winners.
+
+Profit Milestones to Think About:
+- 100% gain: First milestone. Consider selling enough to recoup your initial cost.
+- 200% gain: You've tripled. Trimming here lets you "play with house money."
+- 5x (400%+): Rare territory. Strongly consider locking in significant profits.
+
+Specifically:
+`;
+    topHits.slice(0, 3).forEach(hit => {
+      report += `- ${hit.item.productName}: Selling half would lock in $${hit.sellHalfProfit.toLocaleString()} profit while keeping ${hit.sellHalfUnitsRemaining} units.
+`;
+    });
+  }
+
+  if (topLosers.length > 0) {
+    report += `
+================================================================================
+POSITIONS IN DRAWDOWN
+================================================================================
+
+`;
+    topLosers.forEach((item, i) => {
+      report += `${i + 1}. ${item.productName}
+   Loss: ${item.gainPercent.toFixed(0)}% | Current Value: $${item.totalMarketValue.toLocaleString()}
+   
+`;
+    });
+
+    report += `
+RECOMMENDATION: Review whether your thesis still holds for these positions. If yes, this could be accumulation territory. If not, consider tax-loss harvesting before year-end.
+
+`;
+  }
+
+  report += `
+================================================================================
+ACTION PLAN
+================================================================================
+
+Based on your ${presetLabel} target allocation:
+
+`;
+
+  const sealedDiff = allocationTarget.sealed - sealed;
+  const slabsDiff = allocationTarget.slabs - slabs;
+  const rawDiff = allocationTarget.rawCards - raw;
+
+  if (Math.abs(sealedDiff) > 5) {
+    if (sealedDiff > 0) {
+      report += `□ INCREASE SEALED ALLOCATION
+  You're ${sealedDiff.toFixed(0)}% below your ${allocationTarget.sealed}% target. Consider sealed products on your next purchase.
+
+`;
+    } else {
+      report += `□ CONSIDER REDUCING SEALED
+  You're ${Math.abs(sealedDiff).toFixed(0)}% above your ${allocationTarget.sealed}% target. If you need liquidity, this could be an area to trim.
+
+`;
+    }
+  }
+
+  if (Math.abs(slabsDiff) > 5) {
+    if (slabsDiff > 0) {
+      report += `□ ADD MORE GRADED CARDS
+  You're ${slabsDiff.toFixed(0)}% below your ${allocationTarget.slabs}% target. Authenticated cards offer security and liquidity.
+
+`;
+    } else {
+      report += `□ GRADED POSITION IS HEAVY
+  You're ${Math.abs(slabsDiff).toFixed(0)}% above your ${allocationTarget.slabs}% target. Consider diversifying into other categories.
+
+`;
+    }
+  }
+
+  if (Math.abs(rawDiff) > 5) {
+    if (rawDiff > 0) {
+      report += `□ EXPLORE RAW CARDS
+  You're ${rawDiff.toFixed(0)}% below your ${allocationTarget.rawCards}% target. Raw cards offer flexibility and upside if you grade the right ones.
+
+`;
+    } else {
+      report += `□ RAW EXPOSURE IS HIGH
+  You're ${Math.abs(rawDiff).toFixed(0)}% above your ${allocationTarget.rawCards}% target. Consider grading your best raw cards.
+
+`;
+    }
+  }
+
+  if (concentration && concentration.top1Percent > 20) {
+    report += `□ ADDRESS CONCENTRATION RISK
+  ${concentration.top1Name} is ${concentration.top1Percent.toFixed(0)}% of your portfolio. Consider trimming to reduce position-specific risk.
+
+`;
+  }
+
+  if (topHits.length > 0) {
+    report += `□ TAKE PROFITS ON WINNERS
+  You have ${topHits.length} position(s) with 100%+ gains. Consider selling some to lock in profits and reduce risk.
+
+`;
+  }
+
+  report += `
+================================================================================
+MY TAKEAWAY
+================================================================================
+
+`;
+
+  if (topHits.length > 0 && topGainers[0].gainPercent > 100) {
+    report += `Your ${topHits.length} position(s) with 100%+ gains (${topHits.slice(0, 2).map(m => m.item.productName).join(', ')}) are the highlight.
+
+Consider taking some profits — at least enough to recoup your initial investment. Then you're playing with house money.
+
+`;
+  }
+
+  if (concentration && concentration.top1Percent > 20) {
+    report += `Watch your concentration in ${concentration.top1Name} at ${concentration.top1Percent.toFixed(0)}% of your portfolio. Trimming here could reduce risk without abandoning your thesis.
+
+`;
+  }
+
+  report += `Your $${(summary?.totalMarketValue || 0).toLocaleString()} portfolio across ${items.length} holdings shows thoughtful construction.
+
+You know what you believe in. You're not chasing noise. The next level isn't changing your thesis — it's refining execution.
+
+================================================================================
+
+Generated by mintdfolio - Your Pokémon Financial Advisor
+
+This report is for informational purposes only. Not financial advice.
+Market conditions change — always do your own research.
+`;
+
+  return report;
 }

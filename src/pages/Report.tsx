@@ -12,9 +12,11 @@ export default function Report() {
 
   const generateReport = () => {
     setIsGenerating(true);
-    // Navigate to the generated report page
-    navigate('/report/generated');
-    setIsGenerating(false);
+    // Show loading for 5 seconds before navigating
+    setTimeout(() => {
+      navigate('/report/generated');
+      setIsGenerating(false);
+    }, 5000);
   };
 
   const getCollectorType = () => {
