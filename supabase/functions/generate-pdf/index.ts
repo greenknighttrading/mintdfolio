@@ -29,7 +29,8 @@ serve(async (req) => {
       );
     }
 
-    // Wrap HTML with print-optimized styles
+    // Wrap HTML with print-optimized styles that mimic screen appearance
+    // Using @media print rules to preserve screen styles instead of emulateMedia
     const printOptimizedHtml = `
 <!DOCTYPE html>
 <html>
@@ -38,34 +39,98 @@ serve(async (req) => {
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    * {
+    /* Force print to match screen appearance */
+    *, *::before, *::after {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
       color-adjust: exact !important;
     }
     
     html, body {
-      margin: 0;
-      padding: 0;
+      margin: 0 !important;
+      padding: 0 !important;
       background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      color: #e2e8f0 !important;
+      line-height: 1.6 !important;
+    }
+    
+    /* Lock container width for consistent layout */
+    .container {
+      width: 850px !important;
+      max-width: 850px !important;
+      margin: 0 auto !important;
+      padding: 40px 24px !important;
     }
     
     /* Prevent card splitting across pages */
-    .section, .card, .metric-card, .insight-item, .narrative-block {
+    .section, .card, .metric-card, .insight-item, .narrative-block, .milestone-card {
       break-inside: avoid !important;
       page-break-inside: avoid !important;
     }
     
-    /* Lock container width */
-    .container {
-      width: 900px !important;
-      max-width: 900px !important;
-      margin: 0 auto !important;
+    /* Preserve all backgrounds and gradients in print */
+    .section {
+      background: rgba(30, 27, 75, 0.5) !important;
+      border: 1px solid rgba(139, 92, 246, 0.2) !important;
+      border-radius: 16px !important;
+      padding: 32px !important;
+      margin-bottom: 24px !important;
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15) !important;
     }
     
-    /* Reduce blur/glow for PDF - replace with subtle borders */
-    .header, .section {
-      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15) !important;
+    .header {
+      text-align: center !important;
+      margin-bottom: 48px !important;
+      padding-bottom: 32px !important;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.3) !important;
+    }
+    
+    .metrics-grid {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 16px !important;
+    }
+    
+    .metric-card {
+      background: rgba(15, 23, 42, 0.6) !important;
+      border: 1px solid rgba(139, 92, 246, 0.15) !important;
+      border-radius: 12px !important;
+      padding: 20px !important;
+      text-align: center !important;
+    }
+    
+    .narrative-block {
+      background: rgba(15, 23, 42, 0.4) !important;
+      border-left: 3px solid rgba(139, 92, 246, 0.5) !important;
+      border-radius: 0 10px 10px 0 !important;
+      padding: 20px 24px !important;
+      margin-top: 20px !important;
+    }
+    
+    /* Print-specific overrides to ensure screen styles are used */
+    @media print {
+      html, body {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
+      }
+      
+      .section, .metric-card, .narrative-block, .milestone-card, .insight-item {
+        background-color: inherit !important;
+        border: inherit !important;
+        box-shadow: inherit !important;
+      }
+      
+      /* Ensure text colors are preserved */
+      .logo, .section-title, h1, h2, h3, h4 {
+        color: inherit !important;
+      }
+      
+      /* Keep gradients on text */
+      .logo {
+        background: linear-gradient(135deg, #a78bfa, #818cf8) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+      }
     }
   </style>
 </head>
@@ -74,7 +139,7 @@ ${html}
 </body>
 </html>`;
 
-    // Call Browserless PDF API with screen media emulation
+    // Call Browserless PDF API - no emulateMedia field (handled via CSS above)
     const pdfResponse = await fetch(
       `https://chrome.browserless.io/pdf?token=${browserlessToken}`,
       {
@@ -99,7 +164,6 @@ ${html}
           gotoOptions: {
             waitUntil: "networkidle0",
           },
-          emulateMedia: "screen",
         }),
       }
     );
