@@ -1,11 +1,12 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Download, Loader2 } from "lucide-react";
-import html2pdf from "html2pdf.js";
 
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { Button } from "@/components/ui/button";
 import { buildPortfolioReportHtml } from "@/lib/reportHtml";
 import { Seo } from "@/components/seo/Seo";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function GeneratedReport() {
   const {
@@ -46,49 +47,41 @@ export default function GeneratedReport() {
       const container = iframeDoc.querySelector('.container') as HTMLElement;
       
       if (!container) {
-        console.error('Container not found in iframe');
+        toast.error("Could not find report content");
         setIsGeneratingPdf(false);
         return;
       }
 
-      // Clone the container to avoid modifying the original
-      const clonedContainer = container.cloneNode(true) as HTMLElement;
-      
-      // Create a wrapper with print-specific styles
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = `
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-      `;
-      wrapper.appendChild(clonedContainer);
-      document.body.appendChild(wrapper);
+      // Get the container's outer HTML for server-side rendering
+      const reportHtml = container.outerHTML;
 
-      const opt = {
-        margin: 0.5,
-        filename: `mintdfolio-report-${new Date().toISOString().split('T')[0]}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { 
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: null,
-          allowTaint: true,
-        },
-        jsPDF: { 
-          unit: 'in' as const, 
-          format: 'letter' as const, 
-          orientation: 'portrait' as const
-        },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as const }
-      };
+      // Call edge function to generate PDF with headless Chromium
+      const { data, error } = await supabase.functions.invoke("generate-pdf", {
+        body: { html: reportHtml },
+      });
 
-      await html2pdf().set(opt).from(wrapper).save();
-      
-      // Clean up
-      document.body.removeChild(wrapper);
+      if (error) {
+        console.error("PDF generation error:", error);
+        toast.error("Failed to generate PDF. Please try again.");
+        setIsGeneratingPdf(false);
+        return;
+      }
+
+      // Create blob and download
+      const blob = new Blob([data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `mintdfolio-report-${new Date().toISOString().split("T")[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("PDF downloaded successfully!");
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF. Please try again.");
     } finally {
       setIsGeneratingPdf(false);
     }
