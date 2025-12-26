@@ -34,66 +34,56 @@ serve(async (req) => {
     // Build the complete HTML with all print-optimized styles
     const fullHtml = buildFullHtml(html);
 
-    // Use Browserless /function endpoint - this allows full puppeteer control
-    // including setViewport, emulateMediaType, etc. inside the function code
+    // Use Browserless /function endpoint - allows full puppeteer control
+    // IMPORTANT: All Puppeteer methods must be called inside the function code,
+    // NOT as JSON body parameters (which causes validation errors)
     const functionCode = `
 export default async function ({ page, context }) {
-  // Set viewport for consistent rendering
-  await page.setViewport({
-    width: 900,
-    height: 1200,
-    deviceScaleFactor: 2
-  });
+  try {
+    // Set viewport for consistent rendering (1200px wide for high fidelity)
+    await page.setViewport({
+      width: 1200,
+      height: 1600,
+      deviceScaleFactor: 2
+    });
 
-  // Emulate screen media (not print) to preserve dark theme
-  await page.emulateMediaType('screen');
+    // Emulate screen media (not print) to preserve dark theme colors
+    await page.emulateMediaType('screen');
 
-  // Set content directly from the provided HTML
-  await page.setContent(context.html, {
-    waitUntil: 'networkidle0',
-    timeout: 30000
-  });
+    // Set content directly from the provided HTML
+    await page.setContent(context.html, {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
 
-  // Wait for fonts to load
-  await page.evaluate(() => document.fonts.ready);
+    // Wait for fonts to load
+    await page.evaluate(() => document.fonts.ready);
 
-  // Small delay to ensure all styles are applied
-  await new Promise(r => setTimeout(r, 500));
+    // Small delay to ensure all styles and images are fully rendered
+    await new Promise(r => setTimeout(r, 800));
 
-  // Get the full page height for screenshot
-  const bodyHeight = await page.evaluate(() => {
-    return Math.max(
-      document.body.scrollHeight,
-      document.documentElement.scrollHeight
-    );
-  });
+    // Generate PDF directly with printBackground to preserve colors
+    const pdf = await page.pdf({
+      format: 'Letter',
+      printBackground: true,
+      preferCSSPageSize: false,
+      scale: 0.68,
+      margin: {
+        top: '0.4in',
+        right: '0.4in',
+        bottom: '0.4in',
+        left: '0.4in'
+      }
+    });
 
-  // Take a full-page screenshot at high resolution
-  const screenshot = await page.screenshot({
-    type: 'png',
-    fullPage: true,
-    encoding: 'binary'
-  });
-
-  // Generate PDF from the screenshot approach:
-  // First, create a PDF with the screenshot embedded
-  const pdf = await page.pdf({
-    format: 'Letter',
-    printBackground: true,
-    preferCSSPageSize: false,
-    scale: 0.75,
-    margin: {
-      top: '0.5in',
-      right: '0.5in',
-      bottom: '0.5in',
-      left: '0.5in'
-    }
-  });
-
-  return {
-    data: pdf,
-    type: 'application/pdf'
-  };
+    return {
+      data: pdf,
+      type: 'application/pdf'
+    };
+  } catch (err) {
+    console.error('Puppeteer error:', err);
+    throw err;
+  }
 }
 `;
 
@@ -115,7 +105,7 @@ export default async function ({ page, context }) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Browserless error:", errorText);
+      console.error("Browserless error response:", errorText);
       return new Response(
         JSON.stringify({ error: "Failed to generate PDF", details: errorText }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -147,7 +137,7 @@ function buildFullHtml(contentHtml: string): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=900">
+  <meta name="viewport" content="width=1200">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -162,9 +152,9 @@ function buildFullHtml(contentHtml: string): string {
     html, body {
       margin: 0 !important;
       padding: 0 !important;
-      width: 900px !important;
-      min-width: 900px !important;
-      max-width: 900px !important;
+      width: 1200px !important;
+      min-width: 1200px !important;
+      max-width: 1200px !important;
       background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       color: #e2e8f0 !important;
@@ -172,10 +162,10 @@ function buildFullHtml(contentHtml: string): string {
     }
 
     .container {
-      width: 850px !important;
-      max-width: 850px !important;
+      width: 1100px !important;
+      max-width: 1100px !important;
       margin: 0 auto !important;
-      padding: 40px 24px !important;
+      padding: 48px 32px !important;
     }
 
     .header {
@@ -186,7 +176,7 @@ function buildFullHtml(contentHtml: string): string {
     }
 
     .logo {
-      font-size: 32px !important;
+      font-size: 36px !important;
       font-weight: 700 !important;
       background: linear-gradient(135deg, #a78bfa, #818cf8) !important;
       -webkit-background-clip: text !important;
@@ -197,29 +187,31 @@ function buildFullHtml(contentHtml: string): string {
 
     .subtitle {
       color: #94a3b8 !important;
-      font-size: 14px !important;
+      font-size: 16px !important;
     }
 
     .stats-grid, .metrics-grid {
       display: grid !important;
       grid-template-columns: repeat(3, 1fr) !important;
-      gap: 16px !important;
-      margin-bottom: 24px !important;
+      gap: 20px !important;
+      margin-bottom: 28px !important;
     }
 
     .stat-card, .metric-card {
       background: rgba(15, 23, 42, 0.6) !important;
       border: 1px solid rgba(139, 92, 246, 0.15) !important;
-      border-radius: 12px !important;
-      padding: 20px !important;
+      border-radius: 14px !important;
+      padding: 24px !important;
       text-align: center !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
     }
 
     .stat-value, .metric-value {
-      font-size: 24px !important;
+      font-size: 28px !important;
       font-weight: 700 !important;
       color: #f1f5f9 !important;
-      margin-bottom: 4px !important;
+      margin-bottom: 6px !important;
     }
 
     .stat-value.positive, .metric-value.positive, .positive {
@@ -231,7 +223,7 @@ function buildFullHtml(contentHtml: string): string {
     }
 
     .stat-label, .metric-label {
-      font-size: 12px !important;
+      font-size: 13px !important;
       color: #94a3b8 !important;
       text-transform: uppercase !important;
       letter-spacing: 0.5px !important;
@@ -240,28 +232,28 @@ function buildFullHtml(contentHtml: string): string {
     .section {
       background: rgba(30, 27, 75, 0.5) !important;
       border: 1px solid rgba(139, 92, 246, 0.2) !important;
-      border-radius: 16px !important;
-      padding: 28px !important;
-      margin-bottom: 20px !important;
+      border-radius: 18px !important;
+      padding: 32px !important;
+      margin-bottom: 24px !important;
       box-shadow: 0 4px 20px rgba(139, 92, 246, 0.1) !important;
       break-inside: avoid !important;
       page-break-inside: avoid !important;
     }
 
     .section-title {
-      font-size: 18px !important;
+      font-size: 20px !important;
       font-weight: 600 !important;
       color: #a78bfa !important;
-      margin-bottom: 14px !important;
+      margin-bottom: 16px !important;
       display: flex !important;
       align-items: center !important;
-      gap: 8px !important;
+      gap: 10px !important;
     }
 
     .section-title::before {
       content: '' !important;
       width: 4px !important;
-      height: 20px !important;
+      height: 22px !important;
       background: linear-gradient(180deg, #a78bfa, #818cf8) !important;
       border-radius: 2px !important;
     }
@@ -269,9 +261,9 @@ function buildFullHtml(contentHtml: string): string {
     .narrative-block {
       background: rgba(15, 23, 42, 0.4) !important;
       border-left: 3px solid rgba(139, 92, 246, 0.5) !important;
-      border-radius: 0 10px 10px 0 !important;
-      padding: 20px !important;
-      margin-top: 16px !important;
+      border-radius: 0 12px 12px 0 !important;
+      padding: 24px !important;
+      margin-top: 20px !important;
       break-inside: avoid !important;
       page-break-inside: avoid !important;
     }
@@ -279,57 +271,59 @@ function buildFullHtml(contentHtml: string): string {
     .narrative-title {
       font-weight: 600 !important;
       color: #c4b5fd !important;
-      margin-bottom: 10px !important;
-      font-size: 14px !important;
+      margin-bottom: 12px !important;
+      font-size: 15px !important;
     }
 
     .narrative-text {
       color: #cbd5e1 !important;
-      font-size: 13px !important;
-      line-height: 1.65 !important;
+      font-size: 14px !important;
+      line-height: 1.7 !important;
     }
 
     .collector-profile {
       background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(30, 27, 75, 0.6) 100%) !important;
       border: 1px solid rgba(139, 92, 246, 0.3) !important;
-      border-radius: 16px !important;
-      padding: 28px !important;
-      margin-bottom: 24px !important;
+      border-radius: 18px !important;
+      padding: 32px !important;
+      margin-bottom: 28px !important;
       text-align: center !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
     }
 
     .collector-type {
-      font-size: 26px !important;
+      font-size: 30px !important;
       font-weight: 700 !important;
       background: linear-gradient(135deg, #a78bfa, #c4b5fd) !important;
       -webkit-background-clip: text !important;
       -webkit-text-fill-color: transparent !important;
-      margin-bottom: 10px !important;
+      margin-bottom: 12px !important;
     }
 
     .collector-desc {
       color: #cbd5e1 !important;
-      font-size: 14px !important;
-      max-width: 650px !important;
+      font-size: 15px !important;
+      max-width: 700px !important;
       margin: 0 auto !important;
     }
 
     .allocation-bar {
       display: flex !important;
-      height: 28px !important;
-      border-radius: 8px !important;
+      height: 32px !important;
+      border-radius: 10px !important;
       overflow: hidden !important;
-      margin-bottom: 12px !important;
+      margin-bottom: 14px !important;
     }
 
     .allocation-segment {
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      font-size: 11px !important;
+      font-size: 12px !important;
       font-weight: 600 !important;
       color: white !important;
-      min-width: 30px !important;
+      min-width: 35px !important;
     }
 
     .allocation-segment.sealed { background: #8b5cf6 !important; }
@@ -338,30 +332,30 @@ function buildFullHtml(contentHtml: string): string {
 
     .allocation-legend {
       display: flex !important;
-      gap: 20px !important;
+      gap: 24px !important;
       flex-wrap: wrap !important;
-      margin-bottom: 16px !important;
+      margin-bottom: 18px !important;
     }
 
     .legend-item {
       display: flex !important;
       align-items: center !important;
-      gap: 6px !important;
-      font-size: 12px !important;
+      gap: 8px !important;
+      font-size: 13px !important;
       color: #94a3b8 !important;
     }
 
     .legend-dot {
-      width: 10px !important;
-      height: 10px !important;
+      width: 12px !important;
+      height: 12px !important;
       border-radius: 50% !important;
     }
 
     .health-score {
-      font-size: 48px !important;
+      font-size: 52px !important;
       font-weight: 700 !important;
       text-align: center !important;
-      margin: 16px 0 !important;
+      margin: 20px 0 !important;
     }
 
     .health-score.excellent { color: #4ade80 !important; }
@@ -373,29 +367,29 @@ function buildFullHtml(contentHtml: string): string {
       display: flex !important;
       justify-content: space-between !important;
       align-items: center !important;
-      padding: 10px 14px !important;
+      padding: 12px 16px !important;
       background: rgba(15, 23, 42, 0.4) !important;
-      border-radius: 8px !important;
-      margin-bottom: 8px !important;
+      border-radius: 10px !important;
+      margin-bottom: 10px !important;
     }
 
     .hit-name {
       color: #e2e8f0 !important;
       font-weight: 500 !important;
-      font-size: 13px !important;
+      font-size: 14px !important;
     }
 
     .hit-gain {
       color: #4ade80 !important;
       font-weight: 600 !important;
-      font-size: 13px !important;
+      font-size: 14px !important;
     }
 
     .insight-item {
       background: rgba(15, 23, 42, 0.4) !important;
-      border-radius: 10px !important;
-      padding: 14px 18px !important;
-      margin-bottom: 10px !important;
+      border-radius: 12px !important;
+      padding: 16px 20px !important;
+      margin-bottom: 12px !important;
       border-left: 3px solid rgba(139, 92, 246, 0.4) !important;
       break-inside: avoid !important;
     }
@@ -406,63 +400,63 @@ function buildFullHtml(contentHtml: string): string {
     .insight-title {
       font-weight: 600 !important;
       color: #e2e8f0 !important;
-      margin-bottom: 4px !important;
-      font-size: 13px !important;
+      margin-bottom: 6px !important;
+      font-size: 14px !important;
     }
 
     .insight-desc {
       color: #94a3b8 !important;
-      font-size: 12px !important;
+      font-size: 13px !important;
     }
 
     .target-allocation-card {
       background: rgba(15, 23, 42, 0.5) !important;
       border: 1px solid rgba(139, 92, 246, 0.2) !important;
-      border-radius: 12px !important;
-      padding: 18px !important;
-      margin-top: 18px !important;
+      border-radius: 14px !important;
+      padding: 20px !important;
+      margin-top: 20px !important;
     }
 
     .target-title {
       font-weight: 600 !important;
       color: #a78bfa !important;
-      font-size: 14px !important;
-      margin-bottom: 8px !important;
+      font-size: 15px !important;
+      margin-bottom: 10px !important;
     }
 
     .target-info {
       color: #e2e8f0 !important;
-      font-size: 13px !important;
-      margin-bottom: 10px !important;
+      font-size: 14px !important;
+      margin-bottom: 12px !important;
     }
 
     .target-note {
       color: #94a3b8 !important;
-      font-size: 12px !important;
+      font-size: 13px !important;
       font-style: italic !important;
     }
 
     .action-item {
       display: flex !important;
       align-items: flex-start !important;
-      gap: 12px !important;
-      padding: 14px !important;
+      gap: 14px !important;
+      padding: 16px !important;
       background: rgba(15, 23, 42, 0.3) !important;
-      border-radius: 10px !important;
-      margin-bottom: 10px !important;
+      border-radius: 12px !important;
+      margin-bottom: 12px !important;
       break-inside: avoid !important;
     }
 
     .action-number {
-      width: 24px !important;
-      height: 24px !important;
+      width: 28px !important;
+      height: 28px !important;
       background: linear-gradient(135deg, #a78bfa, #818cf8) !important;
       border-radius: 50% !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       font-weight: 600 !important;
-      font-size: 12px !important;
+      font-size: 13px !important;
       flex-shrink: 0 !important;
     }
 
@@ -474,16 +468,18 @@ function buildFullHtml(contentHtml: string): string {
 
     .footer {
       text-align: center !important;
-      padding: 28px !important;
+      padding: 32px !important;
       color: #64748b !important;
-      font-size: 11px !important;
+      font-size: 12px !important;
       border-top: 1px solid rgba(139, 92, 246, 0.2) !important;
-      margin-top: 20px !important;
+      margin-top: 24px !important;
     }
 
     @media print {
       html, body {
         background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       
       .section, .narrative-block, .collector-profile, .stat-card, .metric-card, .insight-item, .action-item {
