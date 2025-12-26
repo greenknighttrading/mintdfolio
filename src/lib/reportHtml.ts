@@ -956,40 +956,7 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
     </div>
     ` : ''}
     
-    <!-- Position Performance Table -->
-    <div class="section">
-      <h2 class="section-title">Position Performance</h2>
-      <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Click any column header to sort. All ${items.length} positions are shown below.</p>
-      
-      <div class="positions-table-container">
-        <table class="positions-table" id="positionsTable">
-          <thead>
-            <tr>
-              <th data-sort="name" onclick="sortTable(0, 'string')">Product <span class="sort-icon">↕</span></th>
-              <th data-sort="type" onclick="sortTable(1, 'string')">Type <span class="sort-icon">↕</span></th>
-              <th data-sort="qty" onclick="sortTable(2, 'number')">Qty <span class="sort-icon">↕</span></th>
-              <th data-sort="cost" onclick="sortTable(3, 'number')">Cost <span class="sort-icon">↕</span></th>
-              <th data-sort="value" onclick="sortTable(4, 'number')">Value <span class="sort-icon">↕</span></th>
-              <th data-sort="gain" onclick="sortTable(5, 'number')">Gain $ <span class="sort-icon">↕</span></th>
-              <th data-sort="gainPct" onclick="sortTable(6, 'number')">Gain % <span class="sort-icon">↕</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map(item => `
-              <tr>
-                <td class="product-name" title="${item.productName}">${item.productName}</td>
-                <td>${item.assetType}</td>
-                <td>${item.quantity}</td>
-                <td>$${item.totalCostBasis.toLocaleString()}</td>
-                <td>$${item.totalMarketValue.toLocaleString()}</td>
-                <td class="${item.profitDollars >= 0 ? 'positive' : 'negative'}">${item.profitDollars >= 0 ? '+' : ''}$${item.profitDollars.toLocaleString()}</td>
-                <td class="${item.gainPercent >= 0 ? 'positive' : 'negative'}">${item.gainPercent >= 0 ? '+' : ''}${item.gainPercent.toFixed(1)}%</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Position Performance Table removed for cleaner PDF export -->
     
     <!-- Strengths -->
     <div class="section">
