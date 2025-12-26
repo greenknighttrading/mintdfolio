@@ -339,11 +339,15 @@ export function processPortfolioData(
         const unitMarketPrice = quantity > 0 ? totalMarketValue / quantity : marketPrice;
 
         // Cost basis: default to per-unit (multiply by quantity) unless header says "total"
-        const totalCostBasis = costLooksTotal ? averageCostPaid : quantity * averageCostPaid;
-        const unitCostBasis = quantity > 0 ? totalCostBasis / quantity : averageCostPaid;
+        // If cost is 0, treat it as null (not entered) - cost equals market price, profit is 0
+        const isCostZero = averageCostPaid === 0;
+        const effectiveCostPaid = isCostZero ? marketPrice : averageCostPaid;
+        const totalCostBasis = costLooksTotal ? effectiveCostPaid : quantity * effectiveCostPaid;
+        const unitCostBasis = quantity > 0 ? totalCostBasis / quantity : effectiveCostPaid;
 
-        const profitDollars = totalMarketValue - totalCostBasis;
-        const gainPercent = totalCostBasis > 0 ? ((totalMarketValue - totalCostBasis) / totalCostBasis) * 100 : 0;
+        // If original cost was 0, profit is 0 (cost wasn't entered, not that it was free)
+        const profitDollars = isCostZero ? 0 : totalMarketValue - totalCostBasis;
+        const gainPercent = isCostZero ? 0 : (totalCostBasis > 0 ? ((totalMarketValue - totalCostBasis) / totalCostBasis) * 100 : 0);
 
         // Classify asset
         const assetType = classifyAssetType(grade, cardNumber);
