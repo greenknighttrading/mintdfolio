@@ -1,15 +1,17 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Heart, TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
+import { Heart, TrendingUp, TrendingDown, Minus, Info, Package, Clock, Target } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { HealthScoreBreakdown } from '@/contexts/PortfolioContext';
 
 interface HealthScoreCardProps {
   score: number;
+  breakdown?: HealthScoreBreakdown | null;
 }
 
 function getScoreGrade(score: number): { label: string; color: string; bgColor: string } {
@@ -26,13 +28,21 @@ function getScoreIcon(score: number) {
   return TrendingDown;
 }
 
-export function HealthScoreCard({ score }: HealthScoreCardProps) {
-  const grade = getScoreGrade(score);
-  const ScoreIcon = getScoreIcon(score);
+function getScoreColor(score: number): string {
+  if (score >= 80) return 'text-success';
+  if (score >= 65) return 'text-primary';
+  if (score >= 50) return 'text-warning';
+  return 'text-destructive';
+}
+
+export function HealthScoreCard({ score, breakdown }: HealthScoreCardProps) {
+  const displayScore = breakdown?.overall ?? score;
+  const grade = getScoreGrade(displayScore);
+  const ScoreIcon = getScoreIcon(displayScore);
   
   // Calculate stroke dasharray for circular progress
   const circumference = 2 * Math.PI * 45; // radius = 45
-  const strokeDashoffset = circumference - (score / 100) * circumference;
+  const strokeDashoffset = circumference - (displayScore / 100) * circumference;
 
   return (
     <div className="glass-card p-6 animate-fade-in">
@@ -51,31 +61,23 @@ export function HealthScoreCard({ score }: HealthScoreCardProps) {
               </button>
             </TooltipTrigger>
             <TooltipContent side="left" className="max-w-xs p-4">
-              <p className="font-semibold mb-2">How Health Score is Calculated:</p>
+              <p className="font-semibold mb-2">Multi-Dimensional Health Score:</p>
               <ul className="text-xs space-y-1.5">
                 <li className="flex items-start gap-2">
-                  <span className="text-success">+</span>
-                  <span><strong>Profit %:</strong> Up to +20 pts for overall portfolio gains</span>
+                  <Package className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                  <span><strong>Asset Allocation (45%):</strong> How well your sealed/slabs/raw mix matches target</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-success">+</span>
-                  <span><strong>Win Rate:</strong> Up to +15 pts based on % of holdings in profit</span>
+                  <Clock className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                  <span><strong>Era Balance (35%):</strong> Distribution across vintage to current eras</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-destructive">−</span>
-                  <span><strong>Concentration:</strong> Up to -15 pts if top position exceeds 15-30%</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-success">+</span>
-                  <span><strong>Diversity:</strong> Up to +10 pts for category variety</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-destructive">−</span>
-                  <span><strong>Deep Losses:</strong> Up to -10 pts for positions down 30%+</span>
+                  <Target className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                  <span><strong>Concentration (20%):</strong> Diversification across different sets</span>
                 </li>
               </ul>
               <p className="text-xs text-muted-foreground mt-3">
-                Score starts at 50 and adjusts based on these factors.
+                A balanced portfolio across all dimensions scores highest.
               </p>
             </TooltipContent>
           </Tooltip>
@@ -101,7 +103,7 @@ export function HealthScoreCard({ score }: HealthScoreCardProps) {
               cy="50"
               r="45"
               fill="none"
-              stroke={score >= 65 ? 'hsl(var(--success))' : score >= 40 ? 'hsl(var(--warning))' : 'hsl(var(--destructive))'}
+              stroke={displayScore >= 65 ? 'hsl(var(--success))' : displayScore >= 40 ? 'hsl(var(--warning))' : 'hsl(var(--destructive))'}
               strokeWidth="6"
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -111,7 +113,7 @@ export function HealthScoreCard({ score }: HealthScoreCardProps) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className={cn("text-3xl font-bold tabular-nums", grade.color)}>
-              {score}
+              {displayScore}
             </span>
             <span className="text-xs text-muted-foreground">/100</span>
           </div>
@@ -127,10 +129,82 @@ export function HealthScoreCard({ score }: HealthScoreCardProps) {
             {grade.label}
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Based on profit, diversification, concentration, and loss metrics.
+            Based on asset allocation, era balance, and set concentration.
           </p>
         </div>
       </div>
+
+      {/* Breakdown bars */}
+      {breakdown && (
+        <div className="mt-6 pt-4 border-t border-border space-y-3">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground flex items-center gap-1.5">
+                <Package className="w-3 h-3" />
+                Asset Allocation
+              </span>
+              <span className={cn("font-medium tabular-nums", getScoreColor(breakdown.assetScore))}>
+                {breakdown.assetScore}/100
+              </span>
+            </div>
+            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+              <div 
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  breakdown.assetScore >= 65 ? "bg-success" : breakdown.assetScore >= 40 ? "bg-warning" : "bg-destructive"
+                )}
+                style={{ width: `${breakdown.assetScore}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground flex items-center gap-1.5">
+                <Clock className="w-3 h-3" />
+                Era Balance
+              </span>
+              <span className={cn("font-medium tabular-nums", getScoreColor(breakdown.eraScore))}>
+                {breakdown.eraScore}/100
+              </span>
+            </div>
+            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+              <div 
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  breakdown.eraScore >= 65 ? "bg-success" : breakdown.eraScore >= 40 ? "bg-warning" : "bg-destructive"
+                )}
+                style={{ width: `${breakdown.eraScore}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground flex items-center gap-1.5">
+                <Target className="w-3 h-3" />
+                Set Concentration
+              </span>
+              <span className={cn("font-medium tabular-nums", getScoreColor(breakdown.concentrationScore))}>
+                {breakdown.concentrationScore}/100
+              </span>
+            </div>
+            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+              <div 
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  breakdown.concentrationScore >= 65 ? "bg-success" : breakdown.concentrationScore >= 40 ? "bg-warning" : "bg-destructive"
+                )}
+                style={{ width: `${breakdown.concentrationScore}%` }}
+              />
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground pt-1">
+            Weights: Asset 45% • Era 35% • Concentration 20%
+          </p>
+        </div>
+      )}
     </div>
   );
 }

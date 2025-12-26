@@ -10,6 +10,7 @@ import {
   ValidationResult,
   AllocationPreset,
   ALLOCATION_PRESETS,
+  EraAllocationBreakdown,
 } from '@/lib/types';
 import { processPortfolioData, ColumnMapping } from '@/lib/dataParser';
 import {
@@ -19,7 +20,21 @@ import {
   findProfitMilestones,
   generateInsights,
 } from '@/lib/portfolioCalculations';
+import { 
+  calculateEraAllocationBreakdown, 
+  calculateEraHealthScore, 
+  calculateConcentrationHealthScore,
+  calculateSetConcentration
+} from '@/lib/eraClassification';
 import { supabase } from '@/integrations/supabase/client';
+
+// Health score breakdown by dimension
+export interface HealthScoreBreakdown {
+  overall: number;
+  assetScore: number;    // 45% weight
+  eraScore: number;      // 35% weight
+  concentrationScore: number; // 20% weight
+}
 
 interface PortfolioContextType {
   // Data
@@ -31,7 +46,16 @@ interface PortfolioContextType {
   // Metrics
   summary: PortfolioSummary | null;
   allocation: AllocationBreakdown | null;
+  eraAllocation: EraAllocationBreakdown | null;
   concentration: ConcentrationRisk | null;
+  healthScoreBreakdown: HealthScoreBreakdown | null;
+  setConcentration: {
+    topSetPercent: number;
+    topSetName: string;
+    top3SetsPercent: number;
+    top3SetsNames: string[];
+    setBreakdown: { name: string; value: number; percent: number; count: number }[];
+  } | null;
   milestones: ProfitMilestone[];
   insights: Insight[];
 
@@ -114,10 +138,56 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     return calculateAllocationBreakdown(items);
   }, [items, isDataLoaded]);
 
+  const eraAllocation = useMemo(() => {
+    if (!isDataLoaded) return null;
+    return calculateEraAllocationBreakdown(items);
+  }, [items, isDataLoaded]);
+
   const concentration = useMemo(() => {
     if (!isDataLoaded) return null;
     return calculateConcentrationRisk(items);
   }, [items, isDataLoaded]);
+
+  const setConcentrationData = useMemo(() => {
+    if (!isDataLoaded) return null;
+    return calculateSetConcentration(items);
+  }, [items, isDataLoaded]);
+
+  // Multi-dimensional health score: Asset 45%, Era 35%, Concentration 20%
+  const healthScoreBreakdown = useMemo((): HealthScoreBreakdown | null => {
+    if (!isDataLoaded || !allocation || !eraAllocation || !setConcentrationData) return null;
+    
+    // Asset health score - based on deviation from balanced target
+    const assetTarget = { sealed: 50, slabs: 30, rawCards: 20 }; // balanced
+    let assetScore = 100;
+    assetScore -= Math.abs(allocation.sealed.percent - assetTarget.sealed) * 1.5;
+    assetScore -= Math.abs(allocation.slabs.percent - assetTarget.slabs) * 1.5;
+    assetScore -= Math.abs(allocation.rawCards.percent - assetTarget.rawCards) * 1.5;
+    assetScore = Math.max(0, Math.min(100, assetScore));
+    
+    // Era health score
+    const eraScore = calculateEraHealthScore(eraAllocation);
+    
+    // Concentration health score
+    const concentrationScore = calculateConcentrationHealthScore(
+      setConcentrationData.topSetPercent,
+      setConcentrationData.top3SetsPercent
+    );
+    
+    // Weighted overall score
+    const overall = Math.round(
+      assetScore * 0.45 + 
+      eraScore * 0.35 + 
+      concentrationScore * 0.20
+    );
+    
+    return {
+      overall,
+      assetScore: Math.round(assetScore),
+      eraScore,
+      concentrationScore,
+    };
+  }, [isDataLoaded, allocation, eraAllocation, setConcentrationData]);
 
   const milestones = useMemo(() => {
     if (!isDataLoaded) return [];
@@ -192,7 +262,10 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     isDataLoaded,
     summary,
     allocation,
+    eraAllocation,
     concentration,
+    healthScoreBreakdown,
+    setConcentration: setConcentrationData,
     milestones,
     insights,
     allocationTarget,
