@@ -23,17 +23,18 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppLayout>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/insights" element={<Insights />} />
-              <Route path="/winners" element={<Winners />} />
-              <Route path="/rebalance" element={<Rebalance />} />
-              <Route path="/report" element={<Report />} />
-              <Route path="/report/generated" element={<GeneratedReport />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AppLayout>
+          <Routes>
+            {/* Standalone report page - no layout */}
+            <Route path="/report/generated" element={<GeneratedReport />} />
+            
+            {/* All other pages with AppLayout */}
+            <Route element={<AppLayout><Index /></AppLayout>} path="/" />
+            <Route path="/insights" element={<AppLayout><Insights /></AppLayout>} />
+            <Route path="/winners" element={<AppLayout><Winners /></AppLayout>} />
+            <Route path="/rebalance" element={<AppLayout><Rebalance /></AppLayout>} />
+            <Route path="/report" element={<AppLayout><Report /></AppLayout>} />
+            <Route path="*" element={<AppLayout><NotFound /></AppLayout>} />
+          </Routes>
         </BrowserRouter>
       </PortfolioProvider>
     </TooltipProvider>
