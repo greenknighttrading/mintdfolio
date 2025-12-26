@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { Button } from "@/components/ui/button";
