@@ -11,6 +11,7 @@ import Winners from "./pages/Winners";
 import Rebalance from "./pages/Rebalance";
 import Report from "./pages/Report";
 import GeneratedReport from "./pages/GeneratedReport";
+import PrintReport from "./pages/PrintReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,8 +25,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Standalone report page - no layout */}
+            {/* Standalone report pages - no layout */}
             <Route path="/report/generated" element={<GeneratedReport />} />
+            <Route path="/report/print" element={<PrintReport />} />
             
             {/* All other pages with AppLayout */}
             <Route element={<AppLayout><Index /></AppLayout>} path="/" />
