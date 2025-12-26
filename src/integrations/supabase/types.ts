@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      portfolios: {
+        Row: {
+          allocation: Json | null
+          created_at: string
+          id: string
+          items: Json
+          raw_csv: string
+          session_id: string
+          summary: Json | null
+          updated_at: string
+        }
+        Insert: {
+          allocation?: Json | null
+          created_at?: string
+          id?: string
+          items?: Json
+          raw_csv: string
+          session_id: string
+          summary?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          allocation?: Json | null
+          created_at?: string
+          id?: string
+          items?: Json
+          raw_csv?: string
+          session_id?: string
+          summary?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

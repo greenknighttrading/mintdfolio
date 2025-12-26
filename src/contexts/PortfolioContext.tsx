@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import {
   PortfolioItem,
   PortfolioSummary,
@@ -19,6 +19,7 @@ import {
   findProfitMilestones,
   generateInsights,
 } from '@/lib/portfolioCalculations';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PortfolioContextType {
   // Data
@@ -55,6 +56,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [allocationPreset, setAllocationPresetState] = useState<AllocationPreset>('balanced');
   const [customTarget, setCustomTargetState] = useState<AllocationTarget>(ALLOCATION_PRESETS.custom);
   const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
+  const [sessionId] = useState(() => crypto.randomUUID());
 
   const isDataLoaded = items.length > 0;
 
@@ -87,6 +89,30 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     const allInsights = generateInsights(items, summary, concentration, milestones, allocation, allocationTarget);
     return allInsights.filter(insight => !dismissedInsights.has(insight.id));
   }, [items, isDataLoaded, summary, concentration, milestones, allocation, allocationTarget, dismissedInsights]);
+
+  // Save portfolio data to backend when items change
+  useEffect(() => {
+    const saveToBackend = async () => {
+      if (items.length === 0) return;
+      
+      try {
+        const portfolioData = {
+          session_id: sessionId,
+          raw_csv: '', // We'll store just the parsed data
+          items: JSON.parse(JSON.stringify(items)),
+          summary: summary ? JSON.parse(JSON.stringify(summary)) : null,
+          allocation: allocation ? JSON.parse(JSON.stringify(allocation)) : null,
+        };
+        
+        await supabase.from('portfolios').insert(portfolioData);
+        console.log('Portfolio data saved to backend');
+      } catch (error) {
+        console.error('Failed to save portfolio to backend:', error);
+      }
+    };
+    
+    saveToBackend();
+  }, [items, sessionId, summary, allocation]);
 
   const uploadData = useCallback((csvContent: string) => {
     const result = processPortfolioData(csvContent);

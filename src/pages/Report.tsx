@@ -124,8 +124,19 @@ Lower health scores typically mean one of a few things: heavy concentration in o
 The good news? These are all addressable. This report will give you specific steps to improve your score without abandoning your core thesis.`;
     }
 
-    // Allocation narrative
+    // Allocation narrative - with sealed risk warning
     let allocationNarrative = '';
+    const isLowSealed = sealed < 20;
+    const isSealedSmallest = sealed < slabs && sealed < raw;
+    
+    // Add sealed risk warning if applicable
+    let sealedWarning = '';
+    if (isLowSealed) {
+      sealedWarning = `<strong style="color: #f59e0b;">⚠️ Risk Alert:</strong> Your sealed allocation is below 20%. We recommend that sealed take up a substantial part of any collection as it is historically the safest asset to hold. Sealed products — especially booster boxes and ETBs — have shown the most consistent long-term appreciation because they represent finite supply that only decreases over time.<br><br>`;
+    } else if (isSealedSmallest) {
+      sealedWarning = `<strong style="color: #f59e0b;">⚠️ Note:</strong> Sealed is currently your smallest category. While your approach has merits, consider that sealed products have historically provided the most reliable long-term returns. Booster boxes and ETBs in particular are never reprinted, making them natural stores of value.<br><br>`;
+    }
+    
     if (sealed >= 70) {
       allocationNarrative = `On paper, this allocation doesn't look balanced.<br><br>
 ${sealed.toFixed(0)}% sealed is aggressive — no sugarcoating that.<br><br>
@@ -137,12 +148,12 @@ This portfolio is balanced for a high-conviction sealed strategy because:<br>
 In other words: This isn't reckless concentration — it's <em>deliberate</em> concentration.<br><br>
 That said, there's a difference between conviction and fragility, and that's where the next sections matter.`;
     } else if (slabs >= 70) {
-      allocationNarrative = `A ${slabs.toFixed(0)}% graded allocation is a strong statement.<br><br>
+      allocationNarrative = `${sealedWarning}A ${slabs.toFixed(0)}% graded allocation is a strong statement.<br><br>
 You've prioritized authenticated, liquid assets over long-term sealed plays or speculative raw cards. That's a defensive posture — and there's nothing wrong with that.<br><br>
 The upside: you can exit positions quickly if needed. The downside: you may be paying a premium for that security, and sealed products often outperform over multi-year horizons.<br><br>
 This allocation makes sense if you value flexibility over maximum upside. Let's make sure the rest of your portfolio supports that goal.`;
     } else {
-      allocationNarrative = `Your current mix of ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% graded, and ${raw.toFixed(0)}% raw reflects a balanced approach.<br><br>
+      allocationNarrative = `${sealedWarning}Your current mix of ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% graded, and ${raw.toFixed(0)}% raw reflects a balanced approach.<br><br>
 You're not betting everything on one category, which means you can weather different market conditions. Sealed gives you long-term upside, graded provides liquidity and authenticity, and raw offers flexibility.<br><br>
 The trade-off is that you won't capture the full explosive upside if one category massively outperforms. But for most collectors, this balanced approach is the smarter play.`;
     }
@@ -643,7 +654,7 @@ It's <em>refining execution</em>.`;
       </div>
       
       <div class="narrative-block">
-        <div class="narrative-title">Why This Allocation — and What It Really Means</div>
+        <div class="narrative-title">Allocation Analysis</div>
         ${narratives.allocationNarrative}
       </div>
     </div>
@@ -890,7 +901,7 @@ It's <em>refining execution</em>.`;
             ))}
           </div>
 
-          {/* Generate Button */}
+          {/* Download Report Button */}
           <Button
             onClick={generateReport}
             disabled={isGenerating}
@@ -905,8 +916,7 @@ It's <em>refining execution</em>.`;
             ) : (
               <>
                 <Download className="w-5 h-5" />
-                Generate & Download Report
-                <ChevronRight className="w-5 h-5" />
+                Download Report
               </>
             )}
           </Button>
