@@ -3,6 +3,7 @@ import { usePortfolio } from '@/contexts/PortfolioContext';
 import { FileUpload } from '@/components/upload/FileUpload';
 import { PortfolioSummaryCard } from '@/components/dashboard/PortfolioSummaryCard';
 import { AllocationDonut } from '@/components/dashboard/AllocationDonut';
+import { EraAllocationDonut } from '@/components/dashboard/EraAllocationDonut';
 import { StatusChips } from '@/components/dashboard/StatusChips';
 import { ConcentrationCard } from '@/components/dashboard/ConcentrationCard';
 import { HealthScoreCard } from '@/components/dashboard/HealthScoreCard';
@@ -10,7 +11,7 @@ import { StrengthsWeaknesses } from '@/components/dashboard/StrengthsWeaknesses'
 import { TrendingUp, Shield, Lightbulb, Scale } from 'lucide-react';
 
 export default function Index() {
-  const { isDataLoaded, summary } = usePortfolio();
+  const { isDataLoaded, summary, healthScoreBreakdown } = usePortfolio();
 
   if (!isDataLoaded) {
     return (
@@ -104,8 +105,9 @@ export default function Index() {
         {/* Left Column (Summary + Allocation + Strengths flush) */}
         <div className="lg:col-span-2 flex flex-col">
           <PortfolioSummaryCard />
-          <div className="mt-4">
+          <div className="mt-4 grid md:grid-cols-2 gap-4">
             <AllocationDonut />
+            <EraAllocationDonut />
           </div>
           <div className="mt-0">
             <StrengthsWeaknesses />
@@ -114,7 +116,12 @@ export default function Index() {
 
         {/* Right Column */}
         <div className="flex flex-col gap-4">
-          {summary && <HealthScoreCard score={summary.healthScore} />}
+          {summary && (
+            <HealthScoreCard 
+              score={healthScoreBreakdown?.overall ?? summary.healthScore} 
+              breakdown={healthScoreBreakdown}
+            />
+          )}
           <ConcentrationCard />
         </div>
       </div>
