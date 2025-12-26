@@ -36,7 +36,7 @@ export function buildPortfolioReportHtml({
   });
 
   const getCollectorType = () => {
-    if (!allocation) return { type: "Balanced Collector", description: "" };
+    if (!allocation) return { type: "Balanced Collector", description: "", extended: "" };
 
     const sealed = allocation.sealed.percent;
     const slabs = allocation.slabs.percent;
@@ -45,32 +45,69 @@ export function buildPortfolioReportHtml({
     // Build specific description based on their holdings
     const topSealedProducts = sealedItems.slice(0, 3).map(i => i.productName).join(', ');
     const topSlabs = slabItems.slice(0, 3).map(i => i.productName).join(', ');
+    const sealedCount = sealedItems.length;
+    const slabCount = slabItems.length;
+    const rawCount = rawItems.length;
+    const avgHoldingValue = items.length > 0 ? (summary?.totalMarketValue || 0) / items.length : 0;
+    const largestPosition = biggestHoldings[0];
+    const totalValue = summary?.totalMarketValue || 0;
 
     if (sealed >= 50) {
       return {
         type: "The Vault Keeper",
         description: `With ${sealed.toFixed(0)}% of your portfolio in sealed products${topSealedProducts ? ` like ${topSealedProducts}` : ''}, you're clearly playing the long game. You understand that sealed products only become more scarce over time.`,
+        extended: `This collecting philosophy requires a specific temperament. You're comfortable watching market prices fluctuate while your sealed boxes sit untouched. That's psychological discipline most collectors don't have. Your ${sealedCount} sealed positions averaging $${avgHoldingValue.toLocaleString()} each tell a story of deliberate accumulation, not impulse buying.
+
+What defines a Vault Keeper isn't just the allocation — it's the conviction behind it. You've made a bet that the Pokémon TCG will continue to grow, that sealed product scarcity compounds over time, and that patience will be rewarded. History supports this thesis. First edition sealed products from the early 2000s have appreciated thousands of percent. Modern sealed may follow a similar trajectory if you hold long enough.
+
+The trade-off you've accepted: liquidity risk and opportunity cost. Sealed can be harder to move quickly, and you're not capturing gains from graded card spikes. But you've decided that's okay because you're playing a different game — one measured in years, not months.${largestPosition ? ` Your largest position, ${largestPosition.productName} at $${largestPosition.totalMarketValue.toLocaleString()}, represents ${((largestPosition.totalMarketValue / totalValue) * 100).toFixed(0)}% of your total holdings.` : ''}`
       };
     } else if (slabs >= 50) {
       return {
         type: "The Trophy Hunter",
         description: `Your collection is ${slabs.toFixed(0)}% graded cards${topSlabs ? `, featuring pieces like ${topSlabs}` : ''}. You've chosen authenticated excellence over quantity, and each slab represents a deliberate choice.`,
+        extended: `Trophy Hunters aren't just collectors — you're curators. Every graded card in your ${slabCount}-piece collection passed a deliberate filter: Is it worth the grading fee? Is the condition exceptional? Is there a market for this specific card? That filtering process means you're not accumulating noise. You're building a gallery.
+
+The psychology of a Trophy Hunter is interesting. You've accepted a premium for authentication and condition certainty. PSA, CGC, or BGS cases aren't just plastic — they're proof of provenance and protection against condition deterioration. You've paid for that peace of mind, and that's a valid choice for a serious collection.
+
+Your approach also gives you something sealed collectors don't have: easier exit options. Graded cards have established price discovery on eBay, PWCC, and other platforms. When you need to sell, you can move faster than someone trying to offload a case of booster boxes. That liquidity is worth something.${topSlabs ? ` Your featured pieces — ${topSlabs} — represent the core of your thesis. These aren't random purchases; they're positions you believe in.` : ''}`
       };
     } else if (raw >= 50) {
       return {
         type: "The Volume Player",
         description: `With ${raw.toFixed(0)}% in raw cards across ${rawItems.length} holdings, you're hunting for value and grading candidates. You see opportunity where others see risk.`,
+        extended: `Volume Players operate in a different space than other collectors. You're comfortable with condition uncertainty, and you see raw cards as options contracts — each one has potential upside if graded, but you're not paying the premium until you know it's worth it. That's arbitrage thinking.
+
+Your ${rawCount} raw card positions suggest you're either actively hunting for grading candidates, building a personal collection without premium concerns, or both. The average raw card in your portfolio is worth $${(rawItems.reduce((sum, i) => sum + i.totalMarketValue, 0) / (rawCount || 1)).toLocaleString()}, which tells me about your typical price point and risk tolerance.
+
+The Volume Player strategy has real advantages: lower entry costs per position, more diversification, and the flexibility to grade selectively. The risks? Condition uncertainty affects resale value, and raw cards without authentication can be harder to sell to serious buyers.
+
+If you're playing this right, you're constantly evaluating which cards deserve grading investment. The best Volume Players know their cards well enough to spot the PSA 10 candidates before paying for authentication.`
       };
     } else if (sealed >= 30 && slabs >= 30) {
       return {
         type: "The Strategic Diversifier",
         description: `Your balanced ${sealed.toFixed(0)}% sealed / ${slabs.toFixed(0)}% graded split shows sophisticated thinking. You've built a fortress with both long-term appreciation potential and liquid, authenticated assets.`,
+        extended: `Strategic Diversifiers are rare. Most collectors skew heavily toward one category based on personal preference or market momentum. You've resisted that pull and built a portfolio that can perform in multiple market conditions.
+
+Your ${sealed.toFixed(0)}% sealed allocation gives you exposure to the long-term scarcity thesis. Your ${slabs.toFixed(0)}% graded allocation provides liquidity and proven value. Together, they create optionality: you can hold sealed for the long game while using graded positions for tactical plays or liquidity needs.
+
+This approach reflects portfolio theory applied to collectibles. You're not betting everything on one outcome. If sealed products surge, you participate. If graded cards dominate the next bull run, you're there too. The cost of this diversification? You may not capture the full upside if one category massively outperforms.
+
+With ${items.length} total positions across categories, you've built genuine diversification. Your largest holding${largestPosition ? `, ${largestPosition.productName},` : ''} isn't dominating the portfolio, which means no single thesis failure can devastate your collection.`
       };
     }
 
     return {
       type: "The Balanced Collector",
       description: `With ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% graded, and ${raw.toFixed(0)}% raw across ${items.length} total holdings, you're not putting all your eggs in one basket. That's a strength.`,
+      extended: `Balanced Collectors take a pragmatic approach. You haven't committed fully to any single strategy, and that's not weakness — it's flexibility. Your ${items.length} holdings across all three categories mean you can adapt as the market evolves.
+
+The truth about Pokémon collecting is that no one knows which category will outperform in the next cycle. Sealed had its moment. Vintage graded cards had theirs. Modern graded is having one now. By maintaining exposure across categories, you're positioned to benefit from whichever wave comes next.
+
+Your ${sealed.toFixed(0)}% sealed / ${slabs.toFixed(0)}% graded / ${raw.toFixed(0)}% raw distribution shows organic growth rather than a forced strategy. You've collected what interests you while maintaining reasonable diversification. That's sustainable.
+
+The Balanced Collector's challenge is ensuring intentionality. It's easy for this profile to become "random accumulation" without clear targets. The fact that you're analyzing your portfolio suggests you're thinking about this strategically — and that's what separates successful balanced collectors from unfocused ones.`
     };
   };
 
@@ -703,12 +740,99 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
       display: none;
     }
 
+    /* Position Performance Table */
+    .positions-table-container {
+      overflow-x: auto;
+      margin-top: 24px;
+    }
+
+    .positions-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .positions-table th {
+      background: rgba(139, 92, 246, 0.2);
+      color: #a78bfa;
+      font-weight: 600;
+      padding: 12px 10px;
+      text-align: left;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .positions-table th:hover {
+      background: rgba(139, 92, 246, 0.3);
+    }
+
+    .positions-table th .sort-icon {
+      margin-left: 6px;
+      opacity: 0.5;
+    }
+
+    .positions-table th.sorted .sort-icon {
+      opacity: 1;
+    }
+
+    .positions-table td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+      color: #cbd5e1;
+    }
+
+    .positions-table tr:hover td {
+      background: rgba(139, 92, 246, 0.05);
+    }
+
+    .positions-table .positive { color: #4ade80; }
+    .positions-table .negative { color: #f87171; }
+
+    .positions-table .product-name {
+      font-weight: 500;
+      color: #fff;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sort-controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .sort-btn {
+      padding: 6px 12px;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 6px;
+      color: #a78bfa;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .sort-btn:hover {
+      background: rgba(139, 92, 246, 0.2);
+    }
+
+    .sort-btn.active {
+      background: #8b5cf6;
+      color: #fff;
+    }
+
     @media print {
       body { background: #fff; color: #1e293b; }
       .section { border: 1px solid #e2e8f0; }
       .stat-card { background: #f8fafc; }
       .section-title { color: #6366f1; }
       .narrative-block { background: #f8fafc; color: #475569; }
+      .positions-table th { background: #f1f5f9; color: #6366f1; }
+      .positions-table td { color: #475569; border-color: #e2e8f0; }
     }
   </style>
 </head>
@@ -731,6 +855,10 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
       <h2 class="section-title">What This Actually Says About You</h2>
       <div class="narrative-block">
         ${narratives.collectorNarrative}
+      </div>
+      <div class="narrative-block" style="margin-top: 16px;">
+        <div class="narrative-title">The Deeper Read on Your Collector Psychology</div>
+        ${collectorProfile.extended || narratives.collectorNarrative}
       </div>
     </div>
     
@@ -828,6 +956,41 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
     </div>
     ` : ''}
     
+    <!-- Position Performance Table -->
+    <div class="section">
+      <h2 class="section-title">Position Performance</h2>
+      <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Click any column header to sort. All ${items.length} positions are shown below.</p>
+      
+      <div class="positions-table-container">
+        <table class="positions-table" id="positionsTable">
+          <thead>
+            <tr>
+              <th data-sort="name" onclick="sortTable(0, 'string')">Product <span class="sort-icon">↕</span></th>
+              <th data-sort="type" onclick="sortTable(1, 'string')">Type <span class="sort-icon">↕</span></th>
+              <th data-sort="qty" onclick="sortTable(2, 'number')">Qty <span class="sort-icon">↕</span></th>
+              <th data-sort="cost" onclick="sortTable(3, 'number')">Cost <span class="sort-icon">↕</span></th>
+              <th data-sort="value" onclick="sortTable(4, 'number')">Value <span class="sort-icon">↕</span></th>
+              <th data-sort="gain" onclick="sortTable(5, 'number')">Gain $ <span class="sort-icon">↕</span></th>
+              <th data-sort="gainPct" onclick="sortTable(6, 'number')">Gain % <span class="sort-icon">↕</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(item => `
+              <tr>
+                <td class="product-name" title="${item.productName}">${item.productName}</td>
+                <td>${item.assetType}</td>
+                <td>${item.quantity}</td>
+                <td>$${item.totalCostBasis.toLocaleString()}</td>
+                <td>$${item.totalMarketValue.toLocaleString()}</td>
+                <td class="${item.gain >= 0 ? 'positive' : 'negative'}">${item.gain >= 0 ? '+' : ''}$${item.gain.toLocaleString()}</td>
+                <td class="${item.gainPercent >= 0 ? 'positive' : 'negative'}">${item.gainPercent >= 0 ? '+' : ''}${item.gainPercent.toFixed(1)}%</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
     <!-- Strengths -->
     <div class="section">
       <h2 class="section-title">Portfolio Strengths</h2>
@@ -896,6 +1059,35 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
       <p style="margin-top: 8px;">This report is for informational purposes only. Not financial advice. Market conditions change—always do your own research.</p>
     </footer>
   </div>
+  <script>
+    let sortDirection = {};
+    function sortTable(columnIndex, type) {
+      const table = document.getElementById('positionsTable');
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const th = table.querySelectorAll('th')[columnIndex];
+      
+      sortDirection[columnIndex] = !sortDirection[columnIndex];
+      const dir = sortDirection[columnIndex] ? 1 : -1;
+      
+      rows.sort((a, b) => {
+        let aVal = a.cells[columnIndex].textContent.trim();
+        let bVal = b.cells[columnIndex].textContent.trim();
+        
+        if (type === 'number') {
+          aVal = parseFloat(aVal.replace(/[^0-9.-]/g, '')) || 0;
+          bVal = parseFloat(bVal.replace(/[^0-9.-]/g, '')) || 0;
+          return (aVal - bVal) * dir;
+        }
+        return aVal.localeCompare(bVal) * dir;
+      });
+      
+      rows.forEach(row => tbody.appendChild(row));
+      table.querySelectorAll('th').forEach(h => h.classList.remove('sorted'));
+      th.classList.add('sorted');
+      th.querySelector('.sort-icon').textContent = dir === 1 ? '↑' : '↓';
+    }
+  </script>
 </body>
 </html>`;
 }
