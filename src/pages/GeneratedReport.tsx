@@ -1,6 +1,5 @@
 import React, { useMemo, useRef } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Download } from "lucide-react";
+import { Download } from "lucide-react";
 
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { Button } from "@/components/ui/button";
@@ -60,7 +59,7 @@ export default function GeneratedReport() {
 
   if (!isDataLoaded) {
     return (
-      <main className="min-h-[60vh] flex items-center justify-center p-6">
+      <main className="min-h-screen flex items-center justify-center p-6 bg-background">
         <Seo
           title="Portfolio Report | mintdfolio"
           description="Generate a detailed portfolio analysis report and download it as a document."
@@ -68,21 +67,16 @@ export default function GeneratedReport() {
         />
 
         <div className="text-center space-y-4">
-          <h1 className="text-lg font-semibold text-foreground">Portfolio report</h1>
+          <h1 className="text-lg font-semibold text-foreground">Portfolio Report</h1>
           <p className="text-muted-foreground">No portfolio data available.</p>
-          <Link to="/">
-            <Button variant="outline">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Upload Portfolio
-            </Button>
-          </Link>
+          <p className="text-xs text-muted-foreground mt-8">Generated from the MintdFolio App</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="p-4 lg:p-6 max-w-6xl mx-auto">
+    <main className="min-h-screen bg-background">
       <Seo
         title="Portfolio Report | mintdfolio"
         description="View your portfolio analysis report and download it as a document."
@@ -91,13 +85,10 @@ export default function GeneratedReport() {
 
       <h1 className="sr-only">Portfolio analysis report</h1>
 
-      <header className="flex items-center justify-between gap-3 mb-4">
-        <Link to="/report">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </Link>
+      <header className="flex items-center justify-between gap-3 p-4 lg:p-6 max-w-6xl mx-auto">
+        <div className="text-sm text-muted-foreground">
+          Generated from the MintdFolio App
+        </div>
 
         <Button onClick={downloadAsDoc} size="sm">
           <Download className="w-4 h-4 mr-2" />
@@ -105,13 +96,15 @@ export default function GeneratedReport() {
         </Button>
       </header>
 
-      <section className="glass-card overflow-hidden">
-        <iframe
-          ref={iframeRef}
-          title="Portfolio analysis report"
-          className="w-full h-[calc(100vh-11rem)] bg-background"
-          srcDoc={html}
-        />
+      <section className="px-4 lg:px-6 pb-6 max-w-6xl mx-auto">
+        <div className="glass-card overflow-hidden">
+          <iframe
+            ref={iframeRef}
+            title="Portfolio analysis report"
+            className="w-full h-[calc(100vh-8rem)] bg-background"
+            srcDoc={html}
+          />
+        </div>
       </section>
     </main>
   );
