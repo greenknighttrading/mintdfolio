@@ -56,7 +56,47 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [allocationPreset, setAllocationPresetState] = useState<AllocationPreset>('balanced');
   const [customTarget, setCustomTargetState] = useState<AllocationTarget>(ALLOCATION_PRESETS.custom);
   const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
-  const [sessionId] = useState(() => crypto.randomUUID());
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
+
+  // Initialize anonymous authentication
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // Check for existing session first
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          setSessionId(session.user.id);
+        } else {
+          // Sign in anonymously if no session exists
+          const { data, error } = await supabase.auth.signInAnonymously();
+          if (error) {
+            console.error('Anonymous auth failed:', error);
+          } else if (data.user) {
+            setSessionId(data.user.id);
+          }
+        }
+      } catch (error) {
+        console.error('Auth initialization failed:', error);
+      } finally {
+        setAuthInitialized(true);
+      }
+    };
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setSessionId(session.user.id);
+      } else {
+        setSessionId(null);
+      }
+    });
+
+    initAuth();
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const isDataLoaded = items.length > 0;
 
@@ -93,7 +133,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   // Save portfolio data to backend when items change
   useEffect(() => {
     const saveToBackend = async () => {
-      if (items.length === 0) return;
+      // Wait for auth to initialize and ensure we have a session
+      if (items.length === 0 || !sessionId || !authInitialized) return;
       
       try {
         const portfolioData = {
@@ -104,15 +145,17 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
           allocation: allocation ? JSON.parse(JSON.stringify(allocation)) : null,
         };
         
-        await supabase.from('portfolios').insert(portfolioData);
-        console.log('Portfolio data saved to backend');
+        const { error } = await supabase.from('portfolios').insert(portfolioData);
+        if (error) {
+          console.error('Failed to save portfolio to backend:', error);
+        }
       } catch (error) {
         console.error('Failed to save portfolio to backend:', error);
       }
     };
     
     saveToBackend();
-  }, [items, sessionId, summary, allocation]);
+  }, [items, sessionId, authInitialized, summary, allocation]);
 
   const uploadData = useCallback((csvContent: string) => {
     const result = processPortfolioData(csvContent);
