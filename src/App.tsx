@@ -17,30 +17,37 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// App routes wrapped in providers
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Standalone report pages - no layout */}
+      <Route path="/report/generated" element={<GeneratedReport />} />
+      <Route path="/report/print" element={<PrintReport />} />
+      
+      {/* All other pages with AppLayout */}
+      <Route path="/" element={<AppLayout><Index /></AppLayout>} />
+      <Route path="/insights" element={<AppLayout><Insights /></AppLayout>} />
+      <Route path="/winners" element={<AppLayout><Winners /></AppLayout>} />
+      <Route path="/rebalance" element={<AppLayout><Rebalance /></AppLayout>} />
+      <Route path="/era-allocation" element={<AppLayout><EraAllocation /></AppLayout>} />
+      <Route path="/report" element={<AppLayout><Report /></AppLayout>} />
+      <Route path="*" element={<AppLayout><NotFound /></AppLayout>} />
+    </Routes>
+  );
+}
+
 // Main application component
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <PortfolioProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Standalone report pages - no layout */}
-            <Route path="/report/generated" element={<GeneratedReport />} />
-            <Route path="/report/print" element={<PrintReport />} />
-            
-            {/* All other pages with AppLayout */}
-            <Route element={<AppLayout><Index /></AppLayout>} path="/" />
-            <Route path="/insights" element={<AppLayout><Insights /></AppLayout>} />
-            <Route path="/winners" element={<AppLayout><Winners /></AppLayout>} />
-            <Route path="/rebalance" element={<AppLayout><Rebalance /></AppLayout>} />
-            <Route path="/era-allocation" element={<AppLayout><EraAllocation /></AppLayout>} />
-            <Route path="/report" element={<AppLayout><Report /></AppLayout>} />
-            <Route path="*" element={<AppLayout><NotFound /></AppLayout>} />
-          </Routes>
-        </BrowserRouter>
-      </PortfolioProvider>
+      <BrowserRouter>
+        <PortfolioProvider>
+          <Toaster />
+          <Sonner />
+          <AppRoutes />
+        </PortfolioProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
