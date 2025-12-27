@@ -4,12 +4,13 @@ import { usePortfolio } from '@/contexts/PortfolioContext';
 import { ERA_INFO, PokemonEra } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+// Thematic colors distinct from asset allocation chart
 const ERA_COLORS: Record<PokemonEra, { main: string; light: string }> = {
-  vintage: { main: 'hsl(45, 90%, 50%)', light: 'hsl(45, 90%, 70%)' },
-  classic: { main: 'hsl(200, 70%, 50%)', light: 'hsl(200, 70%, 70%)' },
-  modern: { main: 'hsl(280, 60%, 55%)', light: 'hsl(280, 60%, 75%)' },
-  ultraModern: { main: 'hsl(340, 70%, 55%)', light: 'hsl(340, 70%, 75%)' },
-  current: { main: 'hsl(140, 60%, 45%)', light: 'hsl(140, 60%, 65%)' },
+  vintage: { main: 'hsl(35, 85%, 45%)', light: 'hsl(35, 85%, 65%)' },       // Warm amber/gold
+  classic: { main: 'hsl(185, 60%, 42%)', light: 'hsl(185, 60%, 62%)' },     // Teal
+  modern: { main: 'hsl(260, 50%, 55%)', light: 'hsl(260, 50%, 75%)' },      // Purple
+  ultraModern: { main: 'hsl(330, 65%, 50%)', light: 'hsl(330, 65%, 70%)' }, // Magenta/Rose
+  current: { main: 'hsl(160, 55%, 40%)', light: 'hsl(160, 55%, 60%)' },     // Cyan/Mint
 };
 
 const ERA_ORDER: PokemonEra[] = ['vintage', 'classic', 'modern', 'ultraModern', 'current'];
@@ -88,7 +89,7 @@ export function EraAllocationDonut() {
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Legend with years */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
         {ERA_ORDER.map((era) => {
           const eraData = eraAllocation[era];
@@ -102,6 +103,7 @@ export function EraAllocationDonut() {
               />
               <div className="min-w-0">
                 <p className="text-xs font-medium text-foreground truncate">{ERA_INFO[era].name}</p>
+                <p className="text-[10px] text-muted-foreground/70">{ERA_INFO[era].years}</p>
                 <p className="text-xs tabular-nums text-muted-foreground">
                   {eraData.percent.toFixed(1)}%
                 </p>

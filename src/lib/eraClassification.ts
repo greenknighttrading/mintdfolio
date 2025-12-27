@@ -190,71 +190,208 @@ export function getNewerEraStatus(eraAllocation: EraAllocationBreakdown): { text
 
 /**
  * Calculate era health score (0-100)
- * Based on how well the portfolio matches target era allocation
+ * Uses a hard floor of 50 with bonuses for vintage/era coverage
  */
 export function calculateEraHealthScore(
-  eraAllocation: EraAllocationBreakdown,
-  target: EraAllocationTarget = { vintage: 20, classic: 20, modern: 20, ultraModern: 30, current: 10 }
+  eraAllocation: EraAllocationBreakdown
 ): number {
-  let score = 100;
+  // Start at hard floor of 50
+  let score = 50;
   
-  // Penalize deviation from target for each era
-  const eras: PokemonEra[] = ['vintage', 'classic', 'modern', 'ultraModern', 'current'];
-  eras.forEach(era => {
-    const diff = Math.abs(eraAllocation[era].percent - target[era]);
-    // Lose 2 points per percentage point of deviation
-    score -= diff * 2;
+  const vintagePercent = eraAllocation.vintage.percent;
+  const classicPercent = eraAllocation.classic.percent;
+  const modernPercent = eraAllocation.modern.percent;
+  const ultraModernPercent = eraAllocation.ultraModern.percent;
+  const currentPercent = eraAllocation.current.percent;
+  
+  // Vintage bonus
+  if (vintagePercent >= 20) {
+    score += 15;
+  } else if (vintagePercent >= 10) {
+    score += 10;
+  } else if (vintagePercent >= 5) {
+    score += 5;
+  }
+  
+  // Newer-era balance (Modern + Ultra Modern + Current)
+  const newerEraPercent = modernPercent + ultraModernPercent + currentPercent;
+  if (newerEraPercent >= 45 && newerEraPercent <= 55) {
+    score += 10; // Perfect balance
+  } else if (newerEraPercent > 55 && newerEraPercent <= 70) {
+    score += 5; // Slightly high but ok
+  } else if (newerEraPercent > 70 && newerEraPercent <= 85) {
+    score += 0; // No bonus
+  } else if (newerEraPercent > 85) {
+    score -= 5; // Too concentrated in newer
+  }
+  
+  // Classic missing penalty
+  if (classicPercent === 0) {
+    score -= 5;
+  }
+  
+  // Count how many eras have at least 1% representation
+  let erasPresent = 0;
+  if (vintagePercent >= 1) erasPresent++;
+  if (classicPercent >= 1) erasPresent++;
+  if (modernPercent >= 1) erasPresent++;
+  if (ultraModernPercent >= 1) erasPresent++;
+  if (currentPercent >= 1) erasPresent++;
+  
+  // If 4/5 eras present, guarantee minimum 55
+  if (erasPresent >= 4 && score < 55) {
+    score = 55;
+  }
+  
+  // Hard floor at 50
+  return Math.max(50, Math.min(100, Math.round(score)));
+}
+
+/**
+ * Calculate position concentration score (0-100)
+ * Based on individual positions (unique cards/products), not sets
+ */
+export interface PositionConcentration {
+  top1Percent: number;
+  top1Name: string;
+  top3Percent: number;
+  top3Names: string[];
+  top5Percent: number;
+  top5Names: string[];
+  positionBreakdown: { name: string; value: number; percent: number; quantity: number }[];
+}
+
+export function calculatePositionConcentration(items: PortfolioItem[]): PositionConcentration {
+  const totalValue = items.reduce((sum, item) => sum + item.totalMarketValue, 0);
+  
+  // Group by unique position (product name is the position identifier)
+  // Aggregate multiple units of same product into single position
+  const positionValues: Record<string, { value: number; quantity: number }> = {};
+  
+  items.forEach(item => {
+    const positionKey = item.productName || 'Unknown';
+    if (!positionValues[positionKey]) {
+      positionValues[positionKey] = { value: 0, quantity: 0 };
+    }
+    positionValues[positionKey].value += item.totalMarketValue;
+    positionValues[positionKey].quantity += item.quantity || 1;
   });
   
-  // Additional penalty for high current exposure (>10%)
-  if (eraAllocation.current.percent > 10) {
-    score -= (eraAllocation.current.percent - 10) * 3;
-  }
+  // Sort by value descending
+  const sortedPositions = Object.entries(positionValues)
+    .map(([name, data]) => ({
+      name,
+      value: data.value,
+      percent: totalValue > 0 ? (data.value / totalValue) * 100 : 0,
+      quantity: data.quantity,
+    }))
+    .sort((a, b) => b.value - a.value);
   
-  // Additional penalty for low older-era exposure (<30%)
-  const olderEraPercent = eraAllocation.vintage.percent + eraAllocation.classic.percent;
-  if (olderEraPercent < 30) {
-    score -= (30 - olderEraPercent) * 2;
-  }
+  const top3 = sortedPositions.slice(0, 3);
+  const top5 = sortedPositions.slice(0, 5);
+  const top3Value = top3.reduce((sum, p) => sum + p.value, 0);
+  const top5Value = top5.reduce((sum, p) => sum + p.value, 0);
   
-  // Bonus for healthy newer-era exposure (45-55%)
-  const newerEraPercent = eraAllocation.modern.percent + eraAllocation.ultraModern.percent + eraAllocation.current.percent;
-  if (newerEraPercent >= 45 && newerEraPercent <= 55) {
-    score += 10;
-  }
-  
-  return Math.max(0, Math.min(100, Math.round(score)));
+  return {
+    top1Percent: sortedPositions[0]?.percent || 0,
+    top1Name: sortedPositions[0]?.name || 'N/A',
+    top3Percent: totalValue > 0 ? (top3Value / totalValue) * 100 : 0,
+    top3Names: top3.map(p => p.name),
+    top5Percent: totalValue > 0 ? (top5Value / totalValue) * 100 : 0,
+    top5Names: top5.map(p => p.name),
+    positionBreakdown: sortedPositions,
+  };
 }
 
 /**
- * Calculate set concentration score (0-100)
- * Lower concentration = higher score
+ * Calculate concentration health score (0-100) based on position concentration
+ * Uses weighted scoring across top 1, 3, and 5 positions
  */
 export function calculateConcentrationHealthScore(
-  topSetPercent: number,
-  top3SetsPercent: number
+  top1Percent: number,
+  top3Percent: number,
+  top5Percent: number
 ): number {
-  let score = 100;
-  
-  // Penalty for top set concentration
-  if (topSetPercent > 25) {
-    score -= (topSetPercent - 25) * 4; // Heavy penalty above 25%
-  } else if (topSetPercent > 15) {
-    score -= (topSetPercent - 15) * 2; // Moderate penalty above 15%
+  // Top 1 Position scoring (40% weight)
+  let top1Score: number;
+  if (top1Percent <= 10) {
+    top1Score = 90 + (10 - top1Percent) * 0.5; // 90-95
+  } else if (top1Percent <= 20) {
+    top1Score = 85 - (top1Percent - 10); // 75-85
+  } else if (top1Percent <= 30) {
+    top1Score = 75 - (top1Percent - 20); // 65-75
+  } else {
+    top1Score = 60 - Math.min(10, (top1Percent - 30) * 0.5); // 50-60
   }
   
-  // Penalty for top 3 sets concentration
-  if (top3SetsPercent > 60) {
-    score -= (top3SetsPercent - 60) * 3; // Heavy penalty above 60%
-  } else if (top3SetsPercent > 40) {
-    score -= (top3SetsPercent - 40) * 1.5; // Moderate penalty above 40%
+  // Top 3 Positions scoring (35% weight)
+  let top3Score: number;
+  if (top3Percent <= 20) {
+    top3Score = 90 + (20 - top3Percent) * 0.25; // 90-95
+  } else if (top3Percent <= 35) {
+    top3Score = 85 - (top3Percent - 20) * 0.67; // 75-85
+  } else if (top3Percent <= 50) {
+    top3Score = 75 - (top3Percent - 35) * 0.67; // 65-75
+  } else {
+    top3Score = 60 - Math.min(10, (top3Percent - 50) * 0.2); // 50-60
   }
   
-  return Math.max(0, Math.min(100, Math.round(score)));
+  // Top 5 Positions scoring (25% weight)
+  let top5Score: number;
+  if (top5Percent <= 30) {
+    top5Score = 90 + (30 - top5Percent) * 0.17; // 90-95
+  } else if (top5Percent <= 50) {
+    top5Score = 85 - (top5Percent - 30) * 0.5; // 75-85
+  } else if (top5Percent <= 70) {
+    top5Score = 75 - (top5Percent - 50) * 0.5; // 65-75
+  } else {
+    top5Score = 60 - Math.min(10, (top5Percent - 70) * 0.33); // 50-60
+  }
+  
+  // Weighted average
+  const finalScore = (top1Score * 0.40) + (top3Score * 0.35) + (top5Score * 0.25);
+  
+  // Floor at 50
+  return Math.max(50, Math.min(100, Math.round(finalScore)));
 }
 
 /**
- * Calculate set concentration metrics
+ * Calculate asset allocation health score (0-100)
+ * Sealed-dominant scoring with hard rules
+ */
+export function calculateAssetHealthScore(
+  sealedPercent: number,
+  slabsPercent: number,
+  rawPercent: number
+): number {
+  // Hard rule: If Sealed >= 40%, minimum score is 80
+  let score = 60; // Base score
+  
+  if (sealedPercent >= 70) {
+    score = 95;
+  } else if (sealedPercent >= 55) {
+    score = 90;
+  } else if (sealedPercent >= 40) {
+    score = 80;
+  } else if (sealedPercent >= 25) {
+    score = 70;
+  }
+  
+  // Penalty for extreme raw exposure
+  if (rawPercent > 60 && sealedPercent < 40) {
+    score = Math.min(score, 60);
+  }
+  
+  // Penalty for extreme slabs without sealed
+  if (slabsPercent > 70 && sealedPercent < 25) {
+    score = Math.min(score, 65);
+  }
+  
+  return Math.max(50, Math.min(100, Math.round(score)));
+}
+
+/**
+ * Calculate set concentration metrics (legacy, kept for reference)
  */
 export function calculateSetConcentration(items: PortfolioItem[]): {
   topSetPercent: number;

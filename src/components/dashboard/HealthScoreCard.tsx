@@ -14,12 +14,25 @@ interface HealthScoreCardProps {
   breakdown?: HealthScoreBreakdown | null;
 }
 
-function getScoreGrade(score: number): { label: string; color: string; bgColor: string } {
-  if (score >= 80) return { label: 'Excellent', color: 'text-success', bgColor: 'bg-success/10' };
-  if (score >= 65) return { label: 'Good', color: 'text-primary', bgColor: 'bg-primary/10' };
-  if (score >= 50) return { label: 'Fair', color: 'text-warning', bgColor: 'bg-warning/10' };
-  if (score >= 35) return { label: 'Needs Attention', color: 'text-warning', bgColor: 'bg-warning/10' };
-  return { label: 'At Risk', color: 'text-destructive', bgColor: 'bg-destructive/10' };
+function getScoreGrade(score: number): { label: string; color: string; bgColor: string; description: string } {
+  if (score >= 75) return { 
+    label: 'Well Balanced', 
+    color: 'text-success', 
+    bgColor: 'bg-success/10',
+    description: 'Well balanced with risk appropriately sized.'
+  };
+  if (score >= 65) return { 
+    label: 'Moderate Risk', 
+    color: 'text-warning', 
+    bgColor: 'bg-warning/10',
+    description: 'Moderate risk; more diversification recommended.'
+  };
+  return { 
+    label: 'High Concentration', 
+    color: 'text-destructive', 
+    bgColor: 'bg-destructive/10',
+    description: 'Highly concentrated with limited diversification.'
+  };
 }
 
 function getScoreIcon(score: number) {
@@ -43,6 +56,13 @@ export function HealthScoreCard({ score, breakdown }: HealthScoreCardProps) {
   // Calculate stroke dasharray for circular progress
   const circumference = 2 * Math.PI * 45; // radius = 45
   const strokeDashoffset = circumference - (displayScore / 100) * circumference;
+  
+  // Get circle color based on score thresholds
+  const getCircleColor = (s: number) => {
+    if (s >= 75) return 'hsl(var(--success))';
+    if (s >= 65) return 'hsl(var(--warning))';
+    return 'hsl(var(--destructive))';
+  };
 
   return (
     <div className="glass-card p-6 animate-fade-in">
@@ -103,7 +123,7 @@ export function HealthScoreCard({ score, breakdown }: HealthScoreCardProps) {
               cy="50"
               r="45"
               fill="none"
-              stroke={displayScore >= 65 ? 'hsl(var(--success))' : displayScore >= 40 ? 'hsl(var(--warning))' : 'hsl(var(--destructive))'}
+              stroke={getCircleColor(displayScore)}
               strokeWidth="6"
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -129,19 +149,37 @@ export function HealthScoreCard({ score, breakdown }: HealthScoreCardProps) {
             {grade.label}
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Based on asset allocation, era balance, and set concentration.
+            {grade.description}
           </p>
+        </div>
+      </div>
+
+      {/* Score ranges legend */}
+      <div className="mt-4 pt-4 border-t border-border">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-success" />
+            <span className="text-muted-foreground">75+ Well Balanced</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-warning" />
+            <span className="text-muted-foreground">65-74 Moderate Risk</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-destructive" />
+            <span className="text-muted-foreground">50-64 High Concentration</span>
+          </div>
         </div>
       </div>
 
       {/* Breakdown bars */}
       {breakdown && (
-        <div className="mt-6 pt-4 border-t border-border space-y-3">
+        <div className="mt-4 pt-4 border-t border-border space-y-3">
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground flex items-center gap-1.5">
                 <Package className="w-3 h-3" />
-                Asset Allocation
+                Asset Allocation (45%)
               </span>
               <span className={cn("font-medium tabular-nums", getScoreColor(breakdown.assetScore))}>
                 {breakdown.assetScore}/100
@@ -151,7 +189,7 @@ export function HealthScoreCard({ score, breakdown }: HealthScoreCardProps) {
               <div 
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
-                  breakdown.assetScore >= 65 ? "bg-success" : breakdown.assetScore >= 40 ? "bg-warning" : "bg-destructive"
+                  breakdown.assetScore >= 75 ? "bg-success" : breakdown.assetScore >= 65 ? "bg-warning" : "bg-destructive"
                 )}
                 style={{ width: `${breakdown.assetScore}%` }}
               />
@@ -162,7 +200,7 @@ export function HealthScoreCard({ score, breakdown }: HealthScoreCardProps) {
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground flex items-center gap-1.5">
                 <Clock className="w-3 h-3" />
-                Era Balance
+                Era Balance (35%)
               </span>
               <span className={cn("font-medium tabular-nums", getScoreColor(breakdown.eraScore))}>
                 {breakdown.eraScore}/100
@@ -172,7 +210,7 @@ export function HealthScoreCard({ score, breakdown }: HealthScoreCardProps) {
               <div 
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
-                  breakdown.eraScore >= 65 ? "bg-success" : breakdown.eraScore >= 40 ? "bg-warning" : "bg-destructive"
+                  breakdown.eraScore >= 75 ? "bg-success" : breakdown.eraScore >= 65 ? "bg-warning" : "bg-destructive"
                 )}
                 style={{ width: `${breakdown.eraScore}%` }}
               />
@@ -183,7 +221,7 @@ export function HealthScoreCard({ score, breakdown }: HealthScoreCardProps) {
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground flex items-center gap-1.5">
                 <Target className="w-3 h-3" />
-                Set Concentration
+                Position Concentration (20%)
               </span>
               <span className={cn("font-medium tabular-nums", getScoreColor(breakdown.concentrationScore))}>
                 {breakdown.concentrationScore}/100
@@ -193,16 +231,12 @@ export function HealthScoreCard({ score, breakdown }: HealthScoreCardProps) {
               <div 
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
-                  breakdown.concentrationScore >= 65 ? "bg-success" : breakdown.concentrationScore >= 40 ? "bg-warning" : "bg-destructive"
+                  breakdown.concentrationScore >= 75 ? "bg-success" : breakdown.concentrationScore >= 65 ? "bg-warning" : "bg-destructive"
                 )}
                 style={{ width: `${breakdown.concentrationScore}%` }}
               />
             </div>
           </div>
-
-          <p className="text-xs text-muted-foreground pt-1">
-            Weights: Asset 45% • Era 35% • Concentration 20%
-          </p>
         </div>
       )}
     </div>
