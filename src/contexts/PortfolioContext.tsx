@@ -24,7 +24,10 @@ import {
   calculateEraAllocationBreakdown, 
   calculateEraHealthScore, 
   calculateConcentrationHealthScore,
-  calculateSetConcentration
+  calculateAssetHealthScore,
+  calculatePositionConcentration,
+  calculateSetConcentration,
+  PositionConcentration
 } from '@/lib/eraClassification';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -49,6 +52,7 @@ interface PortfolioContextType {
   eraAllocation: EraAllocationBreakdown | null;
   concentration: ConcentrationRisk | null;
   healthScoreBreakdown: HealthScoreBreakdown | null;
+  positionConcentration: PositionConcentration | null;
   setConcentration: {
     topSetPercent: number;
     topSetName: string;
@@ -153,25 +157,30 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     return calculateSetConcentration(items);
   }, [items, isDataLoaded]);
 
+  const positionConcentrationData = useMemo(() => {
+    if (!isDataLoaded) return null;
+    return calculatePositionConcentration(items);
+  }, [items, isDataLoaded]);
+
   // Multi-dimensional health score: Asset 45%, Era 35%, Concentration 20%
   const healthScoreBreakdown = useMemo((): HealthScoreBreakdown | null => {
-    if (!isDataLoaded || !allocation || !eraAllocation || !setConcentrationData) return null;
+    if (!isDataLoaded || !allocation || !eraAllocation || !positionConcentrationData) return null;
     
-    // Asset health score - based on deviation from balanced target
-    const assetTarget = { sealed: 50, slabs: 30, rawCards: 20 }; // balanced
-    let assetScore = 100;
-    assetScore -= Math.abs(allocation.sealed.percent - assetTarget.sealed) * 1.5;
-    assetScore -= Math.abs(allocation.slabs.percent - assetTarget.slabs) * 1.5;
-    assetScore -= Math.abs(allocation.rawCards.percent - assetTarget.rawCards) * 1.5;
-    assetScore = Math.max(0, Math.min(100, assetScore));
+    // Asset health score - sealed-dominant scoring
+    const assetScore = calculateAssetHealthScore(
+      allocation.sealed.percent,
+      allocation.slabs.percent,
+      allocation.rawCards.percent
+    );
     
-    // Era health score
+    // Era health score with hard floor at 50
     const eraScore = calculateEraHealthScore(eraAllocation);
     
-    // Concentration health score
+    // Position concentration health score (based on individual positions, not sets)
     const concentrationScore = calculateConcentrationHealthScore(
-      setConcentrationData.topSetPercent,
-      setConcentrationData.top3SetsPercent
+      positionConcentrationData.top1Percent,
+      positionConcentrationData.top3Percent,
+      positionConcentrationData.top5Percent
     );
     
     // Weighted overall score
@@ -187,7 +196,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       eraScore,
       concentrationScore,
     };
-  }, [isDataLoaded, allocation, eraAllocation, setConcentrationData]);
+  }, [isDataLoaded, allocation, eraAllocation, positionConcentrationData]);
 
   const milestones = useMemo(() => {
     if (!isDataLoaded) return [];
@@ -265,6 +274,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     eraAllocation,
     concentration,
     healthScoreBreakdown,
+    positionConcentration: positionConcentrationData,
     setConcentration: setConcentrationData,
     milestones,
     insights,
