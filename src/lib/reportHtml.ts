@@ -1399,18 +1399,19 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       </div>
       
       ${healthScoreBreakdown ? (() => {
-        const assetPercent = Math.round((healthScoreBreakdown.assetScore / 45) * 100);
-        const eraPercent = Math.round((healthScoreBreakdown.eraScore / 35) * 100);
-        const concentrationPercent = Math.round((healthScoreBreakdown.concentrationScore / 20) * 100);
+        // Use the breakdown values directly - they are already 0-100 scores
+        const assetScore = healthScoreBreakdown.assetScore;
+        const eraScore = healthScoreBreakdown.eraScore;
+        const concentrationScore = healthScoreBreakdown.concentrationScore;
         
-        // Determine which area needs caution
-        const lowestScore = Math.min(assetPercent, eraPercent, concentrationPercent);
+        // Determine which area needs caution (using same thresholds as home page)
+        const lowestScore = Math.min(assetScore, eraScore, concentrationScore);
         let cautionArea = '';
-        if (lowestScore === assetPercent && assetPercent < 70) {
+        if (lowestScore === assetScore && assetScore < 65) {
           cautionArea = 'asset allocation';
-        } else if (lowestScore === eraPercent && eraPercent < 70) {
+        } else if (lowestScore === eraScore && eraScore < 65) {
           cautionArea = 'era balance';
-        } else if (lowestScore === concentrationPercent && concentrationPercent < 70) {
+        } else if (lowestScore === concentrationScore && concentrationScore < 65) {
           cautionArea = 'concentration';
         }
         
@@ -1419,30 +1420,30 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
         <div style="background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="color: #94a3b8; font-size: 13px;">Asset Allocation</span>
-            <span style="color: ${assetPercent >= 78 ? '#4ade80' : assetPercent >= 55 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${assetPercent}/100</span>
+            <span style="color: ${assetScore >= 75 ? '#4ade80' : assetScore >= 65 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${assetScore}/100</span>
           </div>
           <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden;">
-            <div style="background: ${assetPercent >= 78 ? '#4ade80' : assetPercent >= 55 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${Math.min(assetPercent, 100)}%;"></div>
+            <div style="background: ${assetScore >= 75 ? '#4ade80' : assetScore >= 65 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${assetScore}%;"></div>
           </div>
           <p style="color: #64748b; font-size: 11px; margin-top: 8px;">Sealed/graded/raw mix vs targets</p>
         </div>
         <div style="background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="color: #94a3b8; font-size: 13px;">Era Balance</span>
-            <span style="color: ${eraPercent >= 80 ? '#4ade80' : eraPercent >= 57 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${eraPercent}/100</span>
+            <span style="color: ${eraScore >= 75 ? '#4ade80' : eraScore >= 65 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${eraScore}/100</span>
           </div>
           <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden;">
-            <div style="background: ${eraPercent >= 80 ? '#4ade80' : eraPercent >= 57 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${Math.min(eraPercent, 100)}%;"></div>
+            <div style="background: ${eraScore >= 75 ? '#4ade80' : eraScore >= 65 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${eraScore}%;"></div>
           </div>
           <p style="color: #64748b; font-size: 11px; margin-top: 8px;">Vintage, modern, current distribution</p>
         </div>
         <div style="background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="color: #94a3b8; font-size: 13px;">Concentration</span>
-            <span style="color: ${concentrationPercent >= 80 ? '#4ade80' : concentrationPercent >= 50 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${concentrationPercent}/100</span>
+            <span style="color: ${concentrationScore >= 75 ? '#4ade80' : concentrationScore >= 65 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${concentrationScore}/100</span>
           </div>
           <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden;">
-            <div style="background: ${concentrationPercent >= 80 ? '#4ade80' : concentrationPercent >= 50 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${Math.min(concentrationPercent, 100)}%;"></div>
+            <div style="background: ${concentrationScore >= 75 ? '#4ade80' : concentrationScore >= 65 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${concentrationScore}%;"></div>
           </div>
           <p style="color: #64748b; font-size: 11px; margin-top: 8px;">Position and set diversification</p>
         </div>
