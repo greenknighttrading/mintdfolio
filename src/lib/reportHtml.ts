@@ -326,26 +326,27 @@ export function buildPortfolioReportHtml({
     const tradeOff = tradeOffByArchetype[archetypeKey] || '';
     const nudge = gentleNudges[archetypeKey] || '';
     
+    // Build portfolio analysis as flowing paragraphs (no subheadings)
+    const dataShowsParagraph = `You have <strong>${sealed.toFixed(0)}%</strong> sealed${sealedCount > 0 ? `, spread across ${sealedCount} products${topSealedNames ? `, including ${topSealedNames}` : ''}` : ''}. Your allocation leans <strong>${overUnder}</strong> your target by <strong>${diffAmount.toFixed(0)}%</strong>.${dominantEraPercent > 30 ? ` You've concentrated most of your value in the <strong>${dominantEra}</strong> era (${dominantEraPercent.toFixed(0)}%).` : ''}`;
+    
+    const whyParagraph = `This tells me you value <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'stability' : archetypeKey === 'politician' || archetypeKey === 'hustler' ? 'flexibility' : archetypeKey === 'purist' || archetypeKey === 'pathbreaker' ? 'conviction' : 'discovery'}</strong> over <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'speed' : archetypeKey === 'wayfinder' || archetypeKey === 'hustler' ? 'stability' : 'short-term wins'}</strong>. You're comfortable letting time do the work instead of forcing outcomes. ${traits.join(' ')}`;
+    
+    const strengthsParagraph = `${strengths.join(' ')} The downside of this style is <strong>${tradeOff}</strong> This doesn't mean it's wrong — it just means you've chosen a specific game.`;
+    
+    const nudgeParagraph = `${nudge} You don't need to change — just be aware.`;
+
     return `
       <div class="collector-profile">
         <div style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Your Collector Profile Is:</div>
         <div class="collector-type">${archetype.emoji} ${archetype.name}</div>
         <p style="color: #a78bfa; font-style: italic; margin-bottom: 8px;">${archetype.subtitle}</p>
         <p class="collector-desc" style="font-size: 14px;">Role: ${archetype.role}</p>
-      </div>
-      
-      <div class="section">
-        <h2 class="section-title">How You Collect</h2>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; justify-content: center;">
           ${archetype.howTheyCollect.map(trait => `<span style="background: rgba(139, 92, 246, 0.2); padding: 6px 12px; border-radius: 16px; font-size: 13px; color: #a78bfa;">${trait}</span>`).join('')}
         </div>
         
-        <div class="narrative-block">
-          <div class="narrative-title">What This Says About You</div>
-          ${archetype.whatItSays}
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; max-width: 400px; margin-left: auto; margin-right: auto;">
           <div style="background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
             <div style="font-size: 12px; color: #4ade80; text-transform: uppercase; letter-spacing: 0.5px;">Core Strength</div>
             <div style="font-size: 18px; font-weight: 600; color: #fff; margin-top: 4px;">${archetype.coreStrength}</div>
@@ -358,29 +359,95 @@ export function buildPortfolioReportHtml({
       </div>
       
       <div class="section">
-        <h2 class="section-title">Your Portfolio Analysis</h2>
-        <div class="narrative-block">
-          <div class="narrative-title">What The Data Shows</div>
-          <p style="margin-bottom: 12px;">You have <strong>${sealed.toFixed(0)}%</strong> sealed${sealedCount > 0 ? `, spread across ${sealedCount} products${topSealedNames ? `, including ${topSealedNames}` : ''}` : ''}. Your allocation leans <strong>${overUnder}</strong> your target by <strong>${diffAmount.toFixed(0)}%</strong>.${dominantEraPercent > 30 ? ` You've concentrated most of your value in the <strong>${dominantEra}</strong> era (${dominantEraPercent.toFixed(0)}%).` : ''}</p>
-          
-          <div class="narrative-title" style="margin-top: 20px;">Why Your Portfolio Looks This Way</div>
-          <p style="margin-bottom: 12px;">This tells me you value <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'stability' : archetypeKey === 'politician' || archetypeKey === 'hustler' ? 'flexibility' : archetypeKey === 'purist' || archetypeKey === 'pathbreaker' ? 'conviction' : 'discovery'}</strong> over <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'speed' : archetypeKey === 'wayfinder' || archetypeKey === 'hustler' ? 'stability' : 'short-term wins'}</strong>. You're comfortable letting time do the work instead of forcing outcomes.</p>
-          
-          <div class="narrative-title" style="margin-top: 20px;">What This Says About You</div>
-          <p style="margin-bottom: 12px;">${traits.join(' ')}</p>
-          
-          <div class="narrative-title" style="margin-top: 20px;">Your Strengths</div>
-          <p style="margin-bottom: 12px;">${strengths.join(' ')}</p>
-          
-          <div class="narrative-title" style="margin-top: 20px;">The Trade-Off</div>
-          <p style="margin-bottom: 12px;">The downside of this style is <strong>${tradeOff}</strong> This doesn't mean it's wrong — it just means you've chosen a specific game.</p>
-          
-          <div class="narrative-title" style="margin-top: 20px;">A Gentle Nudge</div>
-          <p style="color: #a78bfa;">${nudge}</p>
-          <p style="margin-top: 8px; color: #94a3b8; font-style: italic;">You don't need to change — just be aware.</p>
-        </div>
+        <h2 class="section-title">What This Says About You</h2>
+        <p style="color: #cbd5e1; font-size: 15px; line-height: 1.8;">${archetype.whatItSays}</p>
       </div>
     `;
+  };
+
+  // Store portfolio analysis data for later use in the template
+  const getPortfolioAnalysisContent = () => {
+    const archetypeKey = getCollectorArchetype();
+    if (!archetypeKey || !archetypeData[archetypeKey]) return { dataShowsParagraph: '', whyParagraph: '', strengthsParagraph: '', nudgeParagraph: '' };
+    
+    const sealed = allocation?.sealed.percent || 0;
+    const sealedCount = sealedItems.length;
+    const topSealedNames = sealedItems.slice(0, 3).map(i => escapeHtml(i.productName)).join(', ');
+    
+    const eraConcentration = eraAllocation ? Object.entries(eraAllocation).sort((a, b) => b[1].percent - a[1].percent)[0] : null;
+    const dominantEra = eraConcentration ? eraConcentration[0] : 'mixed';
+    const dominantEraPercent = eraConcentration ? eraConcentration[1].percent : 0;
+    
+    const sealedDiff = allocationTarget.sealed - sealed;
+    const overUnder = sealedDiff > 0 ? 'under' : 'over';
+    const diffAmount = Math.abs(sealedDiff);
+    
+    const traits = personalityTraits[archetypeKey] || [];
+    const strengths = strengthsByArchetype[archetypeKey] || [];
+    const tradeOff = tradeOffByArchetype[archetypeKey] || '';
+    const nudge = gentleNudges[archetypeKey] || '';
+    
+    const dataShowsParagraph = `You have <strong>${sealed.toFixed(0)}%</strong> sealed${sealedCount > 0 ? `, spread across ${sealedCount} products${topSealedNames ? `, including ${topSealedNames}` : ''}` : ''}. Your allocation leans <strong>${overUnder}</strong> your target by <strong>${diffAmount.toFixed(0)}%</strong>.${dominantEraPercent > 30 ? ` You've concentrated most of your value in the <strong>${dominantEra}</strong> era (${dominantEraPercent.toFixed(0)}%).` : ''}`;
+    
+    const whyParagraph = `This tells me you value <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'stability' : archetypeKey === 'politician' || archetypeKey === 'hustler' ? 'flexibility' : archetypeKey === 'purist' || archetypeKey === 'pathbreaker' ? 'conviction' : 'discovery'}</strong> over <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'speed' : archetypeKey === 'wayfinder' || archetypeKey === 'hustler' ? 'stability' : 'short-term wins'}</strong>. You're comfortable letting time do the work instead of forcing outcomes. ${traits.join(' ')}`;
+    
+    const strengthsParagraph = `${strengths.join(' ')} The downside of this style is <strong>${tradeOff}</strong> This doesn't mean it's wrong — it just means you've chosen a specific game.`;
+    
+    const nudgeParagraph = `${nudge} You don't need to change — just be aware.`;
+    
+    return { dataShowsParagraph, whyParagraph, strengthsParagraph, nudgeParagraph };
+  };
+  
+  const personalityTraits: Record<string, string[]> = {
+    sentinel: ["You don't panic easily.", "You'd rather be early than loud.", "You trust time more than timing."],
+    politician: ["You like having options.", "You're comfortable with compromise.", "You adapt without abandoning."],
+    purist: ["You trust your instincts, even when others don't.", "Aesthetics matter to you.", "You collect with conviction."],
+    hustler: ["You'd rather act than wait.", "You learn by doing.", "Small wins compound."],
+    archivist: ["History speaks to you.", "You respect what has lasted.", "Patience is your edge."],
+    wayfinder: ["You read momentum well.", "You're not afraid to move.", "Attention is information."],
+    cartographer: ["Completion drives you.", "You see systems, not just pieces.", "Structure matters."],
+    keystone: ["You build around pillars.", "Quality over quantity.", "Your core is intentional."],
+    pathbreaker: ["You're comfortable being early.", "Conviction beats consensus.", "You accept temporary pain."],
+    detective: ["You notice what others miss.", "Discovery is the reward.", "Quiet confidence."]
+  };
+  
+  const strengthsByArchetype: Record<string, string[]> = {
+    sentinel: ["People like you tend to do well in flat or boring markets.", "Your style rewards patience and conviction.", "You're less likely to make emotional decisions."],
+    politician: ["This is one of the most resilient styles.", "You can weather different market environments.", "Flexibility protects you from being wrong."],
+    purist: ["Your conviction creates natural holding power.", "You won't sell at the wrong time from fear.", "Personal connection drives discipline."],
+    hustler: ["Activity builds market intuition.", "You learn faster than passive collectors.", "Volume creates opportunities."],
+    archivist: ["Vintage has proven staying power.", "Your collection has historical significance.", "You hold what others wish they had."],
+    wayfinder: ["Timing can multiply returns.", "You capture attention-driven moves.", "You're positioned for new cycles."],
+    cartographer: ["Deep knowledge creates edge.", "Completion adds premium value.", "You understand your niche."],
+    keystone: ["Blue-chips anchor through volatility.", "Your core positions are battle-tested.", "Quality compounds over time."],
+    pathbreaker: ["Concentration creates outsized wins.", "You're positioned for asymmetric upside.", "Conviction is your competitive edge."],
+    detective: ["Early positioning pays off.", "You avoid crowded trades.", "Patience reveals hidden value."]
+  };
+  
+  const tradeOffByArchetype: Record<string, string> = {
+    sentinel: "liquidity — sealed can be slower to exit if you ever need cash quickly.",
+    politician: "you may never feel fully committed to one idea, which can limit maximum upside.",
+    purist: "volatility — when markets move against you, conviction cuts both ways.",
+    hustler: "margin erosion and burnout. Activity doesn't always equal progress.",
+    archivist: "opportunity cost — vintage moves slowly, and you may miss newer cycles.",
+    wayfinder: "volatility exposure — attention fades, and newer sets can correct sharply.",
+    cartographer: "concentration risk — depth in one area means exposure to that area's fate.",
+    keystone: "less experimentation — you may miss emerging opportunities outside your pillars.",
+    pathbreaker: "drawdowns before payoff — being early often means being uncomfortable first.",
+    detective: "long waits for recognition — your thesis may take years to play out."
+  };
+  
+  const gentleNudges: Record<string, string> = {
+    sentinel: "If you ever want more flexibility, slabs can act as pressure valves — not replacements.",
+    politician: "When you do feel strongly about a position, letting it grow slightly larger can be rewarding.",
+    purist: "Consider grading your best raw pieces to lock in their value.",
+    hustler: "Build a small 'anchor' position you never trade. It'll keep you grounded.",
+    archivist: "A small allocation to newer sets keeps you connected to the current market.",
+    wayfinder: "Consider holding 1-2 positions longer than usual — some trades become investments.",
+    cartographer: "If concentration feels heavy, one or two positions outside your focus can reduce risk.",
+    keystone: "Every few months, explore something new. Your pillars are strong enough.",
+    pathbreaker: "Size matters — make sure you can survive being wrong longer than expected.",
+    detective: "When one of your ideas starts gaining attention, don't be afraid to let it run — you earned it."
   };
 
   const getNarrativeContent = () => {
@@ -1352,16 +1419,54 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
         <p style="color: #94a3b8; font-size: 14px;">out of 100</p>
       </div>
       
+      ${healthScoreBreakdown ? `
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 24px; margin-bottom: 24px;">
+        <div style="background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #94a3b8; font-size: 13px;">Asset Allocation</span>
+            <span style="color: ${healthScoreBreakdown.assetScore >= 35 ? '#4ade80' : healthScoreBreakdown.assetScore >= 25 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${healthScoreBreakdown.assetScore.toFixed(0)}/45</span>
+          </div>
+          <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px;">
+            <div style="background: ${healthScoreBreakdown.assetScore >= 35 ? '#4ade80' : healthScoreBreakdown.assetScore >= 25 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${(healthScoreBreakdown.assetScore / 45) * 100}%;"></div>
+          </div>
+          <p style="color: #64748b; font-size: 11px; margin-top: 8px;">Sealed/graded/raw mix vs targets</p>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #94a3b8; font-size: 13px;">Era Balance</span>
+            <span style="color: ${healthScoreBreakdown.eraScore >= 28 ? '#4ade80' : healthScoreBreakdown.eraScore >= 20 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${healthScoreBreakdown.eraScore.toFixed(0)}/35</span>
+          </div>
+          <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px;">
+            <div style="background: ${healthScoreBreakdown.eraScore >= 28 ? '#4ade80' : healthScoreBreakdown.eraScore >= 20 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${(healthScoreBreakdown.eraScore / 35) * 100}%;"></div>
+          </div>
+          <p style="color: #64748b; font-size: 11px; margin-top: 8px;">Vintage, modern, current distribution</p>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #94a3b8; font-size: 13px;">Concentration</span>
+            <span style="color: ${healthScoreBreakdown.concentrationScore >= 16 ? '#4ade80' : healthScoreBreakdown.concentrationScore >= 10 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${healthScoreBreakdown.concentrationScore.toFixed(0)}/20</span>
+          </div>
+          <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px;">
+            <div style="background: ${healthScoreBreakdown.concentrationScore >= 16 ? '#4ade80' : healthScoreBreakdown.concentrationScore >= 10 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${(healthScoreBreakdown.concentrationScore / 20) * 100}%;"></div>
+          </div>
+          <p style="color: #64748b; font-size: 11px; margin-top: 8px;">Position and set diversification</p>
+        </div>
+      </div>
+      ` : ''}
+      
       <div class="narrative-block">
-        <div class="narrative-title">How the Health Score Is Calculated — and Why It's Fair</div>
-        <p style="margin-bottom: 16px;">The health score isn't about how much money you've made. It's about how resilient your portfolio is if the market does absolutely nothing for the next 12–24 months.</p>
-        <p style="margin-bottom: 16px;"><strong>Here's what's being weighed:</strong><br>
-        • Allocation balance – how far you are from your stated targets<br>
-        • Liquidity mix – how easily positions can be exited if needed<br>
-        • Concentration risk – how much of the portfolio is exposed to one thesis<br>
-        • Drawdown exposure – how many positions are deep red<br>
-        • Profit discipline – whether large winners are being managed</p>
         ${narratives.healthNarrative}
+      </div>
+    </div>
+    
+    <!-- Portfolio Analysis -->
+    <div class="section">
+      <h2 class="section-title">Portfolio Analysis</h2>
+      <div class="narrative-block">
+        <p style="margin-bottom: 16px;">${getPortfolioAnalysisContent().dataShowsParagraph}</p>
+        <p style="margin-bottom: 16px;">${getPortfolioAnalysisContent().whyParagraph}</p>
+        <p style="margin-bottom: 16px;">${getPortfolioAnalysisContent().strengthsParagraph}</p>
+        <p style="color: #a78bfa;">${getPortfolioAnalysisContent().nudgeParagraph}</p>
       </div>
     </div>
     
