@@ -10,9 +10,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-type SortField = 'gainPercent' | 'profitDollars' | 'totalMarketValue' | 'quantity' | 'cagr';
+type SortField = 'gainPercent' | 'profitDollars' | 'totalMarketValue' | 'quantity' | 'cagr' | 'marketPrice' | 'totalCostBasis';
 type SortDirection = 'asc' | 'desc';
-type PerformanceFilter = 'all' | 'winners' | 'underperforming' | 200 | 300 | 500;
+type PerformanceFilter = 'all' | 'winners' | 'underperforming' | 100 | 200 | 400;
 
 type ColumnId =
   | 'item'
@@ -89,9 +89,9 @@ export function WinnersTable() {
       case 'underperforming':
         filtered = filtered.filter((item) => item.gainPercent < 0);
         break;
+      case 100:
       case 200:
-      case 300:
-      case 500:
+      case 400:
         filtered = filtered.filter((item) => item.gainPercent >= performanceFilter);
         break;
       default:
@@ -105,6 +105,12 @@ export function WinnersTable() {
       if (sortField === 'cagr') {
         aVal = calculateCAGR(a) ?? -Infinity;
         bVal = calculateCAGR(b) ?? -Infinity;
+      } else if (sortField === 'marketPrice') {
+        aVal = a.marketPrice;
+        bVal = b.marketPrice;
+      } else if (sortField === 'totalCostBasis') {
+        aVal = a.totalCostBasis;
+        bVal = b.totalCostBasis;
       } else {
         aVal = a[sortField];
         bVal = b[sortField];
@@ -169,9 +175,9 @@ export function WinnersTable() {
     { value: 'all', label: 'All Holdings' },
     { value: 'winners', label: 'Profitable' },
     { value: 'underperforming', label: 'Underperforming' },
+    { value: 100, label: '≥100%' },
     { value: 200, label: '≥200%' },
-    { value: 300, label: '≥300%' },
-    { value: 500, label: '≥500%' },
+    { value: 400, label: '≥400%' },
   ];
 
   const columns = useMemo(() => {
@@ -207,7 +213,7 @@ export function WinnersTable() {
         },
       },
       mark: {
-        header: 'MARK',
+        header: <SortHeaderButton field="marketPrice">MARK</SortHeaderButton>,
         align: 'right',
         cell: (item) => (
           <span className="tabular-nums text-foreground">{formatCurrency(item.marketPrice, 2)}</span>
@@ -228,7 +234,7 @@ export function WinnersTable() {
         ),
       },
       totalCost: {
-        header: 'Total Cost',
+        header: <SortHeaderButton field="totalCostBasis">Total Cost</SortHeaderButton>,
         align: 'right',
         cell: (item) => (
           <span className="tabular-nums text-muted-foreground">{formatCurrency(item.totalCostBasis, 0)}</span>
