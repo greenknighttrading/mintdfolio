@@ -904,7 +904,6 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       </div>
 
       <div class="narrative-block">
-        <div class="narrative-title">Era Risk Analysis</div>
         <p style="margin-bottom: 12px;">Your era distribution affects portfolio risk:</p>
         <ul style="margin: 0; padding-left: 20px; color: #cbd5e1;">
           <li><strong style="color: #4ade80;">Older Era (${olderEraPercent.toFixed(0)}%)</strong>: Vintage and Classic sets have proven scarcity and established value. ${olderEraPercent >= 30 ? 'Your exposure here is solid.' : 'Consider increasing your vintage/classic exposure for stability.'}</li>
@@ -991,18 +990,10 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       gap: 8px;
     }
     
-    .section-title::before {
-      content: '';
-      width: 4px;
-      height: 24px;
-      background: linear-gradient(180deg, #a78bfa, #818cf8);
-      border-radius: 2px;
-    }
     
     .narrative-block {
       background: rgba(15, 23, 42, 0.4);
-      border-left: 3px solid rgba(139, 92, 246, 0.5);
-      border-radius: 0 10px 10px 0;
+      border-radius: 10px;
       padding: 20px 24px;
       margin-top: 24px;
       font-size: 15px;
@@ -1148,11 +1139,10 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       background: rgba(15, 23, 42, 0.4);
       border-radius: 10px;
       margin-bottom: 12px;
-      border-left: 3px solid;
     }
     
-    .insight-item.strength { border-color: #4ade80; }
-    .insight-item.risk { border-color: #f59e0b; }
+    .insight-item.strength { border-left: 3px solid #4ade80; }
+    .insight-item.risk { border-left: 3px solid #f59e0b; }
     
     .insight-title {
       font-weight: 600;
@@ -1462,6 +1452,7 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       </p>
       `;
       })() : ''}
+    </div>
     
     <!-- Allocation Breakdown with Target -->
     <div class="section">
@@ -1489,7 +1480,6 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       </div>
       
       <div class="narrative-block">
-        <div class="narrative-title">Allocation Analysis</div>
         ${narratives.allocationNarrative}
       </div>
     </div>
@@ -1509,7 +1499,6 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       `).join('')}
       
       <div class="narrative-block">
-        <div class="narrative-title">What to Do With Big Winners (This Is Where Most People Mess Up)</div>
         ${narratives.topPerformersNarrative}
       </div>
     </div>
@@ -1517,38 +1506,35 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
     
     <!-- Position Performance Table removed for cleaner PDF export -->
     
-    <!-- Strengths -->
+    <!-- Strengths & Risks -->
     <div class="section">
-      <h2 class="section-title">Portfolio Strengths</h2>
+      <h2 class="section-title">Portfolio Strengths & Risks</h2>
+      
+      <h3 style="color: #4ade80; font-size: 16px; margin-bottom: 12px;">Strengths</h3>
       ${strengthInsights.length > 0 ? strengthInsights.slice(0, 4).map(insight => `
         <div class="insight-item strength">
           <div class="insight-title">${insight.type.charAt(0).toUpperCase() + insight.type.slice(1)}</div>
           <div class="insight-desc">${insight.message}</div>
         </div>
       `).join('') : `
-        <p style="color: #94a3b8; text-align: center; padding: 20px;">Your portfolio shows solid fundamentals with good diversification across categories.</p>
+        <p style="color: #94a3b8; padding: 12px 0;">Your portfolio shows solid fundamentals with good diversification across categories.</p>
       `}
       
       <div class="narrative-block">
-        <div class="narrative-title">What You're Actually Doing Well</div>
         ${narratives.strengthsNarrative}
       </div>
-    </div>
-    
-    <!-- Risks & Tradeoffs -->
-    <div class="section">
-      <h2 class="section-title">Risks & Tradeoffs</h2>
+      
+      <h3 style="color: #f59e0b; font-size: 16px; margin-top: 24px; margin-bottom: 12px;">Risks & Tradeoffs</h3>
       ${riskInsights.length > 0 ? riskInsights.slice(0, 4).map(insight => `
         <div class="insight-item risk">
           <div class="insight-title">${insight.type.charAt(0).toUpperCase() + insight.type.slice(1)}</div>
           <div class="insight-desc">${insight.message}</div>
         </div>
       `).join('') : `
-        <p style="color: #94a3b8; text-align: center; padding: 20px;">No significant risks detected. Your portfolio appears well-balanced.</p>
+        <p style="color: #94a3b8; padding: 12px 0;">No significant risks detected. Your portfolio appears well-balanced.</p>
       `}
       
       <div class="narrative-block">
-        <div class="narrative-title">Let's Be Honest About the Risks</div>
         ${narratives.risksNarrative}
       </div>
     </div>
@@ -1559,7 +1545,6 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       ${generateActionPlan()}
       
       <div class="narrative-block">
-        <div class="narrative-title">How I'd Actually Execute This</div>
         ${narratives.actionNarrative}
       </div>
     </div>
