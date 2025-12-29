@@ -30,9 +30,10 @@ export function EraAllocationDonut() {
     color: ERA_COLORS[era].main,
   })).filter(d => d.value > 0);
 
-  // Calculate newer/older era percentages
-  const newerEraPercent = eraAllocation.modern.percent + eraAllocation.ultraModern.percent + eraAllocation.current.percent;
+  // Calculate grouped percentages
+  const midModernPercent = eraAllocation.modern.percent + eraAllocation.ultraModern.percent;
   const olderEraPercent = eraAllocation.vintage.percent + eraAllocation.classic.percent;
+  const currentPercent = eraAllocation.current.percent;
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
@@ -82,9 +83,9 @@ export function EraAllocationDonut() {
         
         {/* Center text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-xs text-muted-foreground">Older/Newer</span>
+          <span className="text-xs text-muted-foreground">Older/Mid</span>
           <span className="text-sm font-bold tabular-nums">
-            {olderEraPercent.toFixed(0)}% / {newerEraPercent.toFixed(0)}%
+            {olderEraPercent.toFixed(0)}% / {midModernPercent.toFixed(0)}%
           </span>
         </div>
       </div>
@@ -122,25 +123,29 @@ export function EraAllocationDonut() {
             olderEraPercent >= 30 ? "text-success" : "text-warning"
           )}>
             {olderEraPercent.toFixed(0)}%
-            {olderEraPercent < 30 && " (low)"}
+            <span className="text-muted-foreground ml-1">(Low Risk)</span>
           </span>
         </div>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Newer Era (Modern+)</span>
+          <span className="text-muted-foreground">Mid Modern (Modern + Ultra Modern)</span>
           <span className={cn(
             "font-medium tabular-nums",
-            newerEraPercent >= 45 && newerEraPercent <= 55 ? "text-success" : 
-            newerEraPercent > 55 ? "text-warning" : "text-muted-foreground"
+            midModernPercent >= 30 && midModernPercent <= 50 ? "text-success" : 
+            midModernPercent > 50 ? "text-warning" : "text-muted-foreground"
           )}>
-            {newerEraPercent.toFixed(0)}%
-            {newerEraPercent > 55 && " (high risk)"}
+            {midModernPercent.toFixed(0)}%
+            <span className="text-muted-foreground ml-1">(Medium Risk)</span>
           </span>
         </div>
-        {eraAllocation.current.percent > 10 && (
+        {currentPercent > 0 && (
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Current Window</span>
-            <span className="font-medium tabular-nums text-warning">
-              {eraAllocation.current.percent.toFixed(0)}% (speculative)
+            <span className={cn(
+              "font-medium tabular-nums",
+              currentPercent > 15 ? "text-destructive" : "text-warning"
+            )}>
+              {currentPercent.toFixed(0)}%
+              <span className="text-muted-foreground ml-1">(High Risk)</span>
             </span>
           </div>
         )}

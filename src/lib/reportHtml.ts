@@ -1,4 +1,5 @@
-import { AllocationBreakdown, AllocationPreset, AllocationTarget, ConcentrationRisk, Insight, PortfolioItem, PortfolioSummary, ProfitMilestone } from "@/lib/types";
+import { AllocationBreakdown, AllocationPreset, AllocationTarget, ConcentrationRisk, EraAllocationBreakdown, Insight, PortfolioItem, PortfolioSummary, ProfitMilestone, ERA_INFO } from "@/lib/types";
+import { HealthScoreBreakdown } from "@/contexts/PortfolioContext";
 
 // HTML escape function to prevent XSS attacks from user-supplied data
 function escapeHtml(str: string | undefined | null): string {
@@ -22,6 +23,9 @@ type BuildPortfolioReportHtmlParams = {
   allocationTarget: AllocationTarget;
   allocationPreset: AllocationPreset;
   items: PortfolioItem[];
+  healthScoreBreakdown?: HealthScoreBreakdown | null;
+  eraAllocation?: EraAllocationBreakdown | null;
+  monthlyBudget?: number;
 };
 
 export function buildPortfolioReportHtml({
@@ -33,6 +37,9 @@ export function buildPortfolioReportHtml({
   allocationTarget,
   allocationPreset,
   items,
+  healthScoreBreakdown,
+  eraAllocation,
+  monthlyBudget = 500,
 }: BuildPortfolioReportHtmlParams) {
   // Get specific portfolio items for personalized narratives
   const topGainers = [...items].sort((a, b) => b.gainPercent - a.gainPercent).slice(0, 5);
@@ -219,9 +226,34 @@ The good news? These are addressable without abandoning your thesis.`;
 
     if (sealed >= 70) {
       const sealedProductNames = sealedItems.slice(0, 2).map(i => escapeHtml(i.productName));
-      allocationNarrative = `${sealed.toFixed(0)}% sealed is aggressive — let's not sugarcoat that.<br><br>
-${sealedItems.length > 0 ? `Your sealed exposure spans ${sealedItems.length} products${sealedProductNames.length > 0 ? `, including <strong>${sealedProductNames.join('</strong> and <strong>')}</strong>` : ''}.` : ''}<br><br>
-This isn't reckless concentration — it's deliberate if your sealed is spread across multiple products. But there's a difference between conviction and fragility.`;
+      // Identify premium sealed products (booster boxes, Pokemon Center ETBs)
+      const boosterBoxes = sealedItems.filter(i => 
+        i.productName.toLowerCase().includes('booster box') || 
+        i.productName.toLowerCase().includes('case')
+      );
+      const pcEtbs = sealedItems.filter(i => 
+        i.productName.toLowerCase().includes('pokemon center') && 
+        i.productName.toLowerCase().includes('etb')
+      );
+      const etbs = sealedItems.filter(i => 
+        i.productName.toLowerCase().includes('etb') || 
+        i.productName.toLowerCase().includes('elite trainer')
+      );
+      
+      let sealedPositiveNote = "";
+      if (boosterBoxes.length > 0) {
+        sealedPositiveNote = `<strong style="color: #4ade80;">✓ Gold Standard:</strong> You have ${boosterBoxes.length} booster box position${boosterBoxes.length > 1 ? 's' : ''} — this is the gold standard of Pokémon investing. Booster boxes have historically shown the strongest appreciation.<br><br>`;
+      }
+      if (pcEtbs.length > 0) {
+        sealedPositiveNote += `<strong style="color: #4ade80;">✓ Premium Product:</strong> Pokemon Center ETBs are exclusive and highly sought after. Great addition to your portfolio.<br><br>`;
+      }
+      if (etbs.length > 0 && pcEtbs.length === 0) {
+        sealedPositiveNote += `<strong style="color: #4ade80;">✓ Solid Choice:</strong> ETBs are popular entry points and hold value well.<br><br>`;
+      }
+      
+      allocationNarrative = `${sealed.toFixed(0)}% sealed is aggressive for Pokémon investing — <strong>and that's a good thing.</strong><br><br>
+${sealedPositiveNote}${sealedItems.length > 0 ? `Your sealed exposure spans ${sealedItems.length} products${sealedProductNames.length > 0 ? `, including <strong>${sealedProductNames.join('</strong> and <strong>')}</strong>` : ''}.` : ''}<br><br>
+This isn't reckless concentration — sealed products represent finite, decreasing supply. As long as you're focused on premium products (booster boxes, PC ETBs, special sets), this is a sound strategy.`;
     } else if (slabs >= 70) {
       const firstSlabName = escapeHtml(slabItems[0]?.productName);
       allocationNarrative = `${sealedWarning}${slabs.toFixed(0)}% graded is a strong defensive posture.<br><br>
@@ -427,7 +459,135 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
 
   const totalGain = summary?.unrealizedPL || 0;
   const totalGainPercent = summary?.unrealizedPLPercent || 0;
-  const healthScore = summary?.healthScore || 0;
+  // Use multi-dimensional health score from breakdown if available, fallback to summary
+  const healthScore = healthScoreBreakdown?.overall ?? summary?.healthScore ?? 0;
+  const totalValue = summary?.totalMarketValue || 0;
+
+  // Calculate rebalancing recommendations based on monthly budget
+  const generateRebalancingPlan = () => {
+    if (!allocation) return '';
+    
+    const categories = [
+      { key: 'sealed', label: 'Sealed Products', current: allocation.sealed, target: allocationTarget.sealed },
+      { key: 'slabs', label: 'Graded Cards', current: allocation.slabs, target: allocationTarget.slabs },
+      { key: 'rawCards', label: 'Raw Cards', current: allocation.rawCards, target: allocationTarget.rawCards },
+    ];
+
+    const totalUnderweight = categories.reduce((sum, cat) => {
+      const targetValue = (cat.target / 100) * totalValue;
+      const delta = targetValue - cat.current.value;
+      return sum + (delta > 0 ? delta : 0);
+    }, 0);
+
+    const rebalanceItems = categories
+      .map(cat => {
+        const targetValue = (cat.target / 100) * totalValue;
+        const delta = targetValue - cat.current.value;
+        const monthlyShare = delta > 0 && totalUnderweight > 0
+          ? (delta / totalUnderweight) * monthlyBudget
+          : 0;
+        const monthsNeeded = delta > 0 && monthlyShare > 0 
+          ? Math.ceil(delta / monthlyShare)
+          : 0;
+        return { ...cat, delta, monthlyShare, monthsNeeded };
+      })
+      .filter(cat => cat.monthlyShare > 0);
+
+    if (rebalanceItems.length === 0) {
+      return `<p style="color: #4ade80; text-align: center; padding: 20px;">Your portfolio is already balanced according to your targets. No rebalancing needed!</p>`;
+    }
+
+    const maxMonths = Math.max(...rebalanceItems.map(cat => cat.monthsNeeded));
+
+    return `
+      <div class="target-allocation-card">
+        <div class="target-title">Monthly Investment Budget: $${monthlyBudget.toLocaleString()}/month</div>
+        <div style="margin-top: 16px;">
+          <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 12px;"><strong>Suggested Monthly Allocation:</strong></p>
+          ${rebalanceItems.map(cat => `
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
+              <span style="color: #cbd5e1;">${cat.label}</span>
+              <span style="color: #a78bfa; font-weight: 600;">$${Math.round(cat.monthlyShare).toLocaleString()}/mo</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="margin-top: 16px; padding: 12px; background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
+          <p style="color: #a78bfa; font-weight: 600; font-size: 14px;">
+            Estimated time to reach targets: <span style="color: #fff;">${maxMonths} month${maxMonths > 1 ? 's' : ''}</span>
+          </p>
+          <p style="color: #94a3b8; font-size: 12px; margin-top: 4px;">
+            At $${monthlyBudget.toLocaleString()}/month contribution rate
+          </p>
+        </div>
+      </div>
+    `;
+  };
+
+  // Generate era allocation section
+  const generateEraAllocationSection = () => {
+    if (!eraAllocation) return '';
+    
+    const eras = [
+      { key: 'vintage', ...eraAllocation.vintage, info: ERA_INFO.vintage, risk: 'Low Risk' },
+      { key: 'classic', ...eraAllocation.classic, info: ERA_INFO.classic, risk: 'Low Risk' },
+      { key: 'modern', ...eraAllocation.modern, info: ERA_INFO.modern, risk: 'Medium Risk' },
+      { key: 'ultraModern', ...eraAllocation.ultraModern, info: ERA_INFO.ultraModern, risk: 'Medium Risk' },
+      { key: 'current', ...eraAllocation.current, info: ERA_INFO.current, risk: 'High Risk' },
+    ];
+
+    const olderEraPercent = eraAllocation.vintage.percent + eraAllocation.classic.percent;
+    const midModernPercent = eraAllocation.modern.percent + eraAllocation.ultraModern.percent;
+    const currentPercent = eraAllocation.current.percent;
+
+    return `
+    <div class="section">
+      <h2 class="section-title">Era Allocation</h2>
+      
+      <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80; font-size: 20px;">${olderEraPercent.toFixed(0)}%</div>
+          <div class="stat-label">Older Era</div>
+          <div style="font-size: 10px; color: #64748b; margin-top: 4px;">Low Risk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f59e0b; font-size: 20px;">${midModernPercent.toFixed(0)}%</div>
+          <div class="stat-label">Mid Modern</div>
+          <div style="font-size: 10px; color: #64748b; margin-top: 4px;">Medium Risk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171; font-size: 20px;">${currentPercent.toFixed(0)}%</div>
+          <div class="stat-label">Current</div>
+          <div style="font-size: 10px; color: #64748b; margin-top: 4px;">High Risk</div>
+        </div>
+      </div>
+
+      <div style="display: grid; gap: 12px;">
+        ${eras.filter(era => era.percent > 0).map(era => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(15, 23, 42, 0.4); border-radius: 10px;">
+            <div>
+              <div style="color: #fff; font-weight: 500;">${era.info.name}</div>
+              <div style="color: #64748b; font-size: 12px;">${era.info.years}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="color: #a78bfa; font-weight: 600;">${era.percent.toFixed(1)}%</div>
+              <div style="color: #64748b; font-size: 12px;">$${era.value.toLocaleString()}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="narrative-block">
+        <div class="narrative-title">Era Risk Analysis</div>
+        <p style="margin-bottom: 12px;">Your era distribution affects portfolio risk:</p>
+        <ul style="margin: 0; padding-left: 20px; color: #cbd5e1;">
+          <li><strong style="color: #4ade80;">Older Era (${olderEraPercent.toFixed(0)}%)</strong>: Vintage and Classic sets have proven scarcity and established value. ${olderEraPercent >= 30 ? 'Your exposure here is solid.' : 'Consider increasing your vintage/classic exposure for stability.'}</li>
+          <li><strong style="color: #f59e0b;">Mid Modern (${midModernPercent.toFixed(0)}%)</strong>: Modern and Ultra Modern sets are normalizing post-boom. ${midModernPercent >= 30 && midModernPercent <= 50 ? 'Well balanced.' : midModernPercent > 50 ? 'Heavy exposure — monitor for print run concerns.' : 'Room to add quality modern sets.'}</li>
+          <li><strong style="color: #f87171;">Current Window (${currentPercent.toFixed(0)}%)</strong>: Active print products carry the highest risk. ${currentPercent <= 15 ? 'Your current window exposure is appropriate.' : 'High exposure to active print — be prepared for volatility.'}</li>
+        </ul>
+      </div>
+    </div>
+    `;
+  };
 
   // Preset info for report card
   const presetLabel = allocationPreset === 'conservative' ? 'The Investor (Conservative)' : 
@@ -980,6 +1140,9 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
       </div>
     </div>
     
+    <!-- Era Allocation -->
+    ${generateEraAllocationSection()}
+    
     <!-- Top Hits -->
     ${topHits.length > 0 ? `
     <div class="section">
@@ -1049,7 +1212,8 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
     
     <!-- Rebalancing Considerations -->
     <div class="section">
-      <h2 class="section-title">What Happens If You Rebalance?</h2>
+      <h2 class="section-title">Your Rebalancing Plan</h2>
+      ${generateRebalancingPlan()}
       <div class="narrative-block">
         ${narratives.rebalanceNarrative}
       </div>
