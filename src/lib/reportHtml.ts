@@ -32,7 +32,7 @@ type BuildPortfolioReportHtmlParams = {
 interface Archetype {
   name: string;
   subtitle: string;
-  dataShows: string;
+  dataShows: string; // Now a single flowing paragraph without subheadings
   whyLooksThisWay: string;
   whatSaysAboutYou: string;
   strengths: string;
@@ -88,22 +88,29 @@ export function buildPortfolioReportHtml({
   const getArchetype = (): Archetype => {
     const topSealedProducts = sealedItems.slice(0, 3).map(i => escapeHtml(i.productName)).join(', ');
     const topSlabs = slabItems.slice(0, 3).map(i => escapeHtml(i.productName)).join(', ');
-    const largestPosition = biggestHoldings[0];
+
+    // Build sealed quality notes without green highlighting
+    const buildSealedQualityNotes = () => {
+      const notes: string[] = [];
+      if (boosterBoxes.length > 0) {
+        notes.push(`You have ${boosterBoxes.length} booster box position${boosterBoxes.length > 1 ? 's' : ''} — the gold standard of Pokémon investing.`);
+      }
+      if (pcEtbs.length > 0) {
+        notes.push(`Plus ${pcEtbs.length} Pokemon Center ETB${pcEtbs.length > 1 ? 's' : ''} — premium products with strong collector demand.`);
+      }
+      return notes.join(' ');
+    };
 
     // The Sentinel - High sealed (50%+)
     if (sealed >= 50) {
-      let sealedQualityNote = "";
-      if (boosterBoxes.length > 0) {
-        sealedQualityNote = `You have ${boosterBoxes.length} booster box position${boosterBoxes.length > 1 ? 's' : ''} — the gold standard of Pokémon investing.`;
-      }
-      if (pcEtbs.length > 0) {
-        sealedQualityNote += ` Plus ${pcEtbs.length} Pokemon Center ETB${pcEtbs.length > 1 ? 's' : ''} — premium products with strong collector demand.`;
-      }
+      const sealedQualityNote = buildSealedQualityNotes();
+      const sealedDiff = Math.abs(sealed - allocationTarget.sealed).toFixed(0);
+      const sealedDirection = sealed > allocationTarget.sealed ? 'above' : 'below';
 
       return {
         name: "The Sentinel",
         subtitle: "A long-term guardian who trusts time more than noise.",
-        dataShows: `You have ${sealed.toFixed(0)}% sealed, well above average, spread across ${sealedItems.length} products${topSealedProducts ? ` like ${topSealedProducts}` : ''}. Your sealed allocation sits ${Math.abs(sealed - allocationTarget.sealed).toFixed(0)}% ${sealed > allocationTarget.sealed ? 'above' : 'below'} your target, while slabs and raw make up a smaller portion of your portfolio.${sealedQualityNote ? `<br><br><strong style="color: #4ade80;">✓ ${sealedQualityNote}</strong>` : ''}`,
+        dataShows: `You have ${sealed.toFixed(0)}% sealed, well above average, spread across ${sealedItems.length} products${topSealedProducts ? ` including ${topSealedProducts}` : ''}. Your sealed allocation sits ${sealedDiff}% ${sealedDirection} your target, while slabs and raw make up a smaller portion of your portfolio.${sealedQualityNote ? `<br><br>${sealedQualityNote}` : ''}<br><br>High sealed exposure is actually a positive signal for Pokémon investing — sealed products have a 25-year track record of rewarding patience, representing finite and decreasing supply.`,
         whyLooksThisWay: "This tells me you prioritize durability over activity. You're not trying to outsmart the market — you're letting scarcity and time work in your favor. Sealed products represent finite, decreasing supply, and your allocation reflects confidence in this thesis.",
         whatSaysAboutYou: "You're calm under pressure. Price swings don't shake you, and you don't feel the need to constantly \"do something.\" You're comfortable waiting while others react. You'd rather be early than loud.",
         strengths: "Collectors like you tend to perform well over long timelines. You avoid overtrading, reduce decision fatigue, and benefit when patience is rewarded. Booster boxes and premium ETBs have historically shown the strongest appreciation.",
@@ -117,7 +124,7 @@ export function buildPortfolioReportHtml({
       return {
         name: "The Trophy Hunter",
         subtitle: "A curator who values authenticated excellence over quantity.",
-        dataShows: `Your collection is ${slabs.toFixed(0)}% graded cards${topSlabs ? `, featuring pieces like ${topSlabs}` : ''}. You've assembled ${slabItems.length} graded pieces, each representing a deliberate choice.`,
+        dataShows: `Your collection is ${slabs.toFixed(0)}% graded cards${topSlabs ? `, featuring pieces like ${topSlabs}` : ''}. You've assembled ${slabItems.length} graded pieces, each representing a deliberate choice.<br><br>Graded cards offer something sealed collectors don't have: easier exit options and established price discovery. PSA 10s are the gold standard for graded investments, while PSA 9s offer solid value at lower entry points.`,
         whyLooksThisWay: "This tells me you value authentication and condition certainty over quantity. Every graded card passed a deliberate filter: Is it worth the grading fee? Is the condition exceptional? Is there a market for this specific card?",
         whatSaysAboutYou: "You're a curator, not just a collector. You understand that PSA, CGC, or BGS cases aren't just plastic — they're proof of provenance and protection. You've paid for that peace of mind, and that's a valid choice for a serious collection.",
         strengths: "Your approach gives you something sealed collectors don't have: easier exit options. Graded cards have established price discovery on eBay, PWCC, and other platforms. When you need to sell, you can move faster than someone trying to offload sealed product.",
@@ -126,12 +133,12 @@ export function buildPortfolioReportHtml({
       };
     }
 
-    // The Volume Player - High raw (50%+)
+    // The Detective - High raw (50%+)
     if (raw >= 50) {
       return {
         name: "The Detective",
         subtitle: "A quiet observer who connects dots others miss.",
-        dataShows: `You hold ${rawItems.length} raw card positions, making up ${raw.toFixed(0)}% of your portfolio. Many may be grading candidates waiting to unlock value.`,
+        dataShows: `You hold ${rawItems.length} raw card positions, making up ${raw.toFixed(0)}% of your portfolio. Many may be grading candidates waiting to unlock value.<br><br>Raw cards represent the highest upside potential when graded correctly. Consider which cards might be PSA 10 candidates — these could significantly increase in value once authenticated.`,
         whyLooksThisWay: "This tells me you trust observation over attention. You see raw cards as options contracts — each one has potential upside if graded, but you're not paying the premium until you know it's worth it. That's arbitrage thinking.",
         whatSaysAboutYou: "You're curious, patient, and detail-oriented. You enjoy the process of discovery — not just the outcome. You'd rather investigate than follow headlines.",
         strengths: "People like you often find value early. You're less influenced by crowd psychology and more comfortable being alone in your thinking. Maximum flexibility, maximum upside potential.",
@@ -145,7 +152,7 @@ export function buildPortfolioReportHtml({
       return {
         name: "The Politician",
         subtitle: "A master of balance, negotiation, and compromise.",
-        dataShows: `Your portfolio sits close to equilibrium, with ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% slabs, and ${raw.toFixed(0)}% raw. You're spread across ${items.length} positions with no single category dominating.`,
+        dataShows: `Your portfolio sits close to equilibrium, with ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% slabs, and ${raw.toFixed(0)}% raw. You're spread across ${items.length} positions with no single category dominating.<br><br>This balanced approach gives you exposure to multiple market conditions — you participate in sealed appreciation while maintaining liquidity through graded cards.`,
         whyLooksThisWay: "This tells me you value flexibility and adaptability. You don't commit everything to one idea — you keep options open and adjust as conditions change.",
         whatSaysAboutYou: "You're thoughtful and pragmatic. You understand trade-offs and don't chase absolutes. You like having leverage — and the ability to pivot.",
         strengths: "This is one of the most resilient styles. You can weather different market environments without being forced into uncomfortable decisions. If sealed products surge, you participate. If graded cards dominate the next bull run, you're there too.",
@@ -158,7 +165,7 @@ export function buildPortfolioReportHtml({
     return {
       name: "The Balanced Collector",
       subtitle: "A pragmatic investor who values diversification over concentration.",
-      dataShows: `With ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% graded, and ${raw.toFixed(0)}% raw across ${items.length} total holdings, you're not putting all your eggs in one basket.`,
+      dataShows: `With ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% graded, and ${raw.toFixed(0)}% raw across ${items.length} total holdings, you're not putting all your eggs in one basket.<br><br>Your diversification across asset types means you're positioned to benefit from whichever category leads the next market cycle.`,
       whyLooksThisWay: "This tells me you take a pragmatic approach. You haven't committed fully to any single strategy, and that's not weakness — it's flexibility. Your holdings across all three categories mean you can adapt as the market evolves.",
       whatSaysAboutYou: "You're not trying to predict which category will outperform next. You've collected what interests you while maintaining reasonable diversification. That's sustainable.",
       strengths: "By maintaining exposure across categories, you're positioned to benefit from whichever wave comes next. Your diversification across ${items.length} positions shows organic growth rather than a forced strategy.",
@@ -323,7 +330,7 @@ export function buildPortfolioReportHtml({
     return tradeoffs;
   };
 
-  // Era Allocation Section
+  // Era Allocation Section with Analysis
   const generateEraAllocationSection = () => {
     if (!eraAllocation) return '';
 
@@ -338,6 +345,40 @@ export function buildPortfolioReportHtml({
     const olderEra = eraAllocation.vintage.percent + eraAllocation.classic.percent;
     const midModern = eraAllocation.modern.percent + eraAllocation.ultraModern.percent;
     const currentWindow = eraAllocation.current.percent;
+
+    // Generate era-specific analysis
+    const generateEraAnalysis = () => {
+      const analyses: string[] = [];
+
+      // Older Era Analysis
+      if (olderEra >= 40) {
+        analyses.push(`Your ${olderEra.toFixed(0)}% allocation to Older Era (Vintage + Classic) shows a preference for established, battle-tested products. These eras have proven appreciation patterns and are generally considered lower risk — the supply is locked in, demand is established, and nostalgia only grows stronger.`);
+      } else if (olderEra >= 20) {
+        analyses.push(`Your ${olderEra.toFixed(0)}% Older Era exposure provides a stable foundation. Vintage and Classic products anchor your portfolio with proven appreciation history and lower volatility.`);
+      } else if (olderEra > 0) {
+        analyses.push(`Your ${olderEra.toFixed(0)}% Older Era allocation is relatively light. While newer products have their place, consider that Vintage and Classic items offer stability and proven long-term performance.`);
+      }
+
+      // Mid Modern Analysis
+      if (midModern >= 40) {
+        analyses.push(`With ${midModern.toFixed(0)}% in Mid Modern (Modern + Ultra Modern), you're positioned in a medium-risk window. These products are past initial release hype but haven't yet achieved full "vintage" status. This is the speculation zone — products that could graduate to classic status or remain in limbo.`);
+      } else if (midModern >= 20) {
+        analyses.push(`Your ${midModern.toFixed(0)}% Mid Modern allocation balances speculation with established products. This era represents medium risk — past the initial hype cycle but not yet proven over decades.`);
+      } else if (midModern > 0) {
+        analyses.push(`Your ${midModern.toFixed(0)}% Mid Modern exposure is conservative. This era often offers strong value opportunities for patient investors.`);
+      }
+
+      // Current Window Analysis
+      if (currentWindow >= 30) {
+        analyses.push(`Your ${currentWindow.toFixed(0)}% Current Window allocation is aggressive. New releases carry higher risk — print runs are unknown, demand is unproven, and you're competing with retail availability. That said, identifying winners early can be rewarding if you're selective about which products to hold long-term.`);
+      } else if (currentWindow >= 15) {
+        analyses.push(`Your ${currentWindow.toFixed(0)}% Current Window exposure is moderate. Newer products add growth potential but carry higher uncertainty about future performance.`);
+      } else if (currentWindow > 0) {
+        analyses.push(`Your ${currentWindow.toFixed(0)}% Current Window allocation is conservative. You're wisely avoiding the rush on new releases, though selective positions in standout products can add upside.`);
+      }
+
+      return analyses.join('<br><br>');
+    };
 
     return `
       <div class="era-summary">
@@ -368,17 +409,24 @@ export function buildPortfolioReportHtml({
           </div>
         `).join('')}
       </div>
+      <div class="era-analysis">
+        <div class="era-analysis-title">What This Means For You</div>
+        <div class="era-analysis-content">${generateEraAnalysis()}</div>
+      </div>
     `;
   };
 
-  // Rebalancing Plan
+  // Rebalancing Plan with Plain English Explanation
   const generateRebalancingPlan = () => {
     if (!allocation) return '';
     
     const categories = [
-      { key: 'sealed', label: 'Sealed Products', current: allocation.sealed, target: allocationTarget.sealed },
-      { key: 'slabs', label: 'Graded Cards', current: allocation.slabs, target: allocationTarget.slabs },
-      { key: 'rawCards', label: 'Raw Cards', current: allocation.rawCards, target: allocationTarget.rawCards },
+      { key: 'sealed', label: 'Sealed Products', current: allocation.sealed, target: allocationTarget.sealed, 
+        advice: 'Focus on booster boxes (the gold standard) or Pokemon Center ETBs. These premium sealed products have the strongest historical appreciation.' },
+      { key: 'slabs', label: 'Graded Cards', current: allocation.slabs, target: allocationTarget.slabs,
+        advice: 'PSA 10s are the gold standard for graded investments — their value is locked in and verified. PSA 9s offer solid value at lower entry points and are perfectly acceptable. Graded cards give you exposure to cards whose value has been authenticated and protected.' },
+      { key: 'rawCards', label: 'Raw Cards', current: allocation.rawCards, target: allocationTarget.rawCards,
+        advice: 'Look for cards with grading potential. The best raw pickups are those that could become PSA 10s — your profit margin expands significantly when you grade a winner.' },
     ];
 
     const totalUnderweight = categories.reduce((sum, cat) => {
@@ -397,29 +445,60 @@ export function buildPortfolioReportHtml({
         const monthsNeeded = delta > 0 && monthlyShare > 0 
           ? Math.ceil(delta / monthlyShare)
           : 0;
-        return { ...cat, delta, monthlyShare, monthsNeeded };
-      })
-      .filter(cat => cat.monthlyShare > 0);
+        const isOverweight = delta < 0;
+        return { ...cat, delta, monthlyShare, monthsNeeded, isOverweight };
+      });
 
-    if (rebalanceItems.length === 0) {
-      return `<p class="balanced-message">Your portfolio is already balanced according to your targets. No rebalancing needed!</p>`;
+    const underweightItems = rebalanceItems.filter(cat => cat.monthlyShare > 0);
+    const overweightItems = rebalanceItems.filter(cat => cat.isOverweight);
+
+    if (underweightItems.length === 0) {
+      return `<p class="balanced-message">Your portfolio is already balanced according to your targets. Keep doing what you're doing!</p>`;
     }
 
-    const maxMonths = Math.max(...rebalanceItems.map(cat => cat.monthsNeeded));
+    const maxMonths = Math.max(...underweightItems.map(cat => cat.monthsNeeded));
+
+    // Generate plain English summary
+    const generatePlainEnglishSummary = () => {
+      const summaryParts: string[] = [];
+      
+      summaryParts.push(`<strong>Here's what your $${monthlyBudget.toLocaleString()}/month budget means in plain English:</strong>`);
+      
+      underweightItems.forEach(cat => {
+        const monthlyAmount = Math.round(cat.monthlyShare);
+        summaryParts.push(`<br><br>• <strong>Invest $${monthlyAmount.toLocaleString()} per month in ${cat.label}.</strong> ${cat.advice}`);
+      });
+
+      if (overweightItems.length > 0) {
+        const overweightNames = overweightItems.map(c => c.label).join(' and ');
+        summaryParts.push(`<br><br>• <strong>You're already overweight on ${overweightNames}</strong> — no need to add more there. Let your existing positions do the work while you balance out the rest of your portfolio.`);
+      }
+
+      return summaryParts.join('');
+    };
 
     return `
       <div class="rebalance-card">
         <div class="rebalance-title">Monthly Investment Budget: $${monthlyBudget.toLocaleString()}/month</div>
         <div class="rebalance-items">
-          ${rebalanceItems.map(cat => `
+          ${underweightItems.map(cat => `
             <div class="rebalance-item">
               <span class="rebalance-label">${cat.label}</span>
               <span class="rebalance-amount">$${Math.round(cat.monthlyShare).toLocaleString()}/mo</span>
             </div>
           `).join('')}
+          ${overweightItems.map(cat => `
+            <div class="rebalance-item overweight">
+              <span class="rebalance-label">${cat.label}</span>
+              <span class="rebalance-status">Already overweight</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="rebalance-explanation">
+          ${generatePlainEnglishSummary()}
         </div>
         <div class="rebalance-timeline">
-          <strong>Timeline:</strong> Following this plan, you'll reach your target allocation in approximately ${maxMonths} months.
+          <strong>Timeline:</strong> Following this plan consistently, you'll reach your target allocation in approximately ${maxMonths} months.
         </div>
       </div>
     `;
@@ -761,6 +840,27 @@ export function buildPortfolioReportHtml({
     
     .era-percent { width: 40px; text-align: right; font-size: 13px; color: #a78bfa; font-weight: 600; }
     
+    .era-analysis {
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(139, 92, 246, 0.1);
+      border-radius: 12px;
+      border-left: 3px solid #8b5cf6;
+    }
+    
+    .era-analysis-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #a78bfa;
+      margin-bottom: 12px;
+    }
+    
+    .era-analysis-content {
+      font-size: 14px;
+      color: #cbd5e1;
+      line-height: 1.7;
+    }
+    
     /* Rebalancing */
     .rebalance-card {
       background: rgba(139, 92, 246, 0.1);
@@ -785,8 +885,23 @@ export function buildPortfolioReportHtml({
       border-bottom: 1px solid rgba(139, 92, 246, 0.2);
     }
     
+    .rebalance-item.overweight {
+      opacity: 0.7;
+    }
+    
     .rebalance-label { color: #cbd5e1; }
     .rebalance-amount { color: #a78bfa; font-weight: 600; }
+    .rebalance-status { color: #64748b; font-size: 13px; font-style: italic; }
+    
+    .rebalance-explanation {
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #cbd5e1;
+      line-height: 1.8;
+    }
     
     .rebalance-timeline {
       background: rgba(139, 92, 246, 0.15);
