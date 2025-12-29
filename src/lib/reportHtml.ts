@@ -358,49 +358,26 @@ export function buildPortfolioReportHtml({
       </div>
       
       <div class="section">
-        <h2 class="section-title">What The Data Shows</h2>
+        <h2 class="section-title">Your Portfolio Analysis</h2>
         <div class="narrative-block">
-          <p style="margin-bottom: 12px;">You have <strong>${sealed.toFixed(0)}%</strong> sealed${sealedCount > 0 ? `, spread across ${sealedCount} products${topSealedNames ? `, including ${topSealedNames}` : ''}` : ''}.</p>
-          <p style="margin-bottom: 12px;">Your allocation leans <strong>${overUnder}</strong> your target by <strong>${diffAmount.toFixed(0)}%</strong>.</p>
-          ${dominantEraPercent > 30 ? `<p>You've concentrated most of your value in the <strong>${dominantEra}</strong> era (${dominantEraPercent.toFixed(0)}%).</p>` : ''}
-        </div>
-      </div>
-      
-      <div class="section">
-        <h2 class="section-title">Why Your Portfolio Looks This Way</h2>
-        <div class="narrative-block">
-          <p style="margin-bottom: 12px;">This tells me you value <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'stability' : archetypeKey === 'politician' || archetypeKey === 'hustler' ? 'flexibility' : archetypeKey === 'purist' || archetypeKey === 'pathbreaker' ? 'conviction' : 'discovery'}</strong> over <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'speed' : archetypeKey === 'wayfinder' || archetypeKey === 'hustler' ? 'stability' : 'short-term wins'}</strong>.</p>
-          <p>You're comfortable letting time do the work instead of forcing outcomes.</p>
-        </div>
-      </div>
-      
-      <div class="section">
-        <h2 class="section-title">What This Says About You</h2>
-        <div class="narrative-block">
-          ${traits.map(t => `<p style="margin-bottom: 8px;">• ${t}</p>`).join('')}
-        </div>
-      </div>
-      
-      <div class="section">
-        <h2 class="section-title">Your Strengths</h2>
-        <div class="narrative-block">
-          ${strengths.map(s => `<p style="margin-bottom: 8px;">• ${s}</p>`).join('')}
-        </div>
-      </div>
-      
-      <div class="section">
-        <h2 class="section-title">The Trade-Off</h2>
-        <div class="narrative-block">
-          <p style="margin-bottom: 12px;">The downside of this style is <strong>${tradeOff}</strong></p>
-          <p style="color: #94a3b8; font-style: italic;">This doesn't mean it's wrong — it just means you've chosen a specific game.</p>
-        </div>
-      </div>
-      
-      <div class="section">
-        <h2 class="section-title">A Gentle Nudge</h2>
-        <div class="narrative-block">
+          <div class="narrative-title">What The Data Shows</div>
+          <p style="margin-bottom: 12px;">You have <strong>${sealed.toFixed(0)}%</strong> sealed${sealedCount > 0 ? `, spread across ${sealedCount} products${topSealedNames ? `, including ${topSealedNames}` : ''}` : ''}. Your allocation leans <strong>${overUnder}</strong> your target by <strong>${diffAmount.toFixed(0)}%</strong>.${dominantEraPercent > 30 ? ` You've concentrated most of your value in the <strong>${dominantEra}</strong> era (${dominantEraPercent.toFixed(0)}%).` : ''}</p>
+          
+          <div class="narrative-title" style="margin-top: 20px;">Why Your Portfolio Looks This Way</div>
+          <p style="margin-bottom: 12px;">This tells me you value <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'stability' : archetypeKey === 'politician' || archetypeKey === 'hustler' ? 'flexibility' : archetypeKey === 'purist' || archetypeKey === 'pathbreaker' ? 'conviction' : 'discovery'}</strong> over <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'speed' : archetypeKey === 'wayfinder' || archetypeKey === 'hustler' ? 'stability' : 'short-term wins'}</strong>. You're comfortable letting time do the work instead of forcing outcomes.</p>
+          
+          <div class="narrative-title" style="margin-top: 20px;">What This Says About You</div>
+          <p style="margin-bottom: 12px;">${traits.join(' ')}</p>
+          
+          <div class="narrative-title" style="margin-top: 20px;">Your Strengths</div>
+          <p style="margin-bottom: 12px;">${strengths.join(' ')}</p>
+          
+          <div class="narrative-title" style="margin-top: 20px;">The Trade-Off</div>
+          <p style="margin-bottom: 12px;">The downside of this style is <strong>${tradeOff}</strong> This doesn't mean it's wrong — it just means you've chosen a specific game.</p>
+          
+          <div class="narrative-title" style="margin-top: 20px;">A Gentle Nudge</div>
           <p style="color: #a78bfa;">${nudge}</p>
-          <p style="margin-top: 12px; color: #94a3b8; font-style: italic;">You don't need to change — just be aware.</p>
+          <p style="margin-top: 8px; color: #94a3b8; font-style: italic;">You don't need to change — just be aware.</p>
         </div>
       </div>
     `;
