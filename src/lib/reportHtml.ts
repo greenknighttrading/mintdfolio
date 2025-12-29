@@ -343,8 +343,7 @@ export function buildPortfolioReportHtml({
       <div class="collector-profile">
         <div style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Your Collector Profile Is:</div>
         <div class="collector-type">${archetype.emoji} ${archetype.name}</div>
-        <p style="color: #a78bfa; font-style: italic; margin-bottom: 8px;">${archetype.subtitle}</p>
-        <p class="collector-desc" style="font-size: 14px;">Role: ${archetype.role}</p>
+        <p style="color: #a78bfa; font-style: italic; margin-bottom: 16px;">${archetype.subtitle} ${archetype.role}.</p>
         
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; justify-content: center;">
           ${archetype.howTheyCollect.map(trait => `<span style="background: rgba(139, 92, 246, 0.2); padding: 6px 12px; border-radius: 16px; font-size: 13px; color: #a78bfa;">${trait}</span>`).join('')}
@@ -842,14 +841,88 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
         </div>
       </div>
       
-      <div style="margin-top: 24px;">
-        <div class="narrative-title">What This Means In Plain English</div>
-        <div class="narrative-block" style="margin-top: 12px;">
-          ${plainEnglishAdvice.map(advice => `<p style="margin-bottom: 16px;">${advice}</p>`).join('')}
-          <p style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(139, 92, 246, 0.2); color: #a78bfa;">
-            <strong>Remember:</strong> Graded cards give you exposure to cards whose value has been "locked in" by third-party authentication. This removes condition uncertainty and makes future selling easier.
+      <div class="narrative-block" style="margin-top: 24px;">
+        ${plainEnglishAdvice.map(advice => `<p style="margin-bottom: 16px;">${advice}</p>`).join('')}
+        <p style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(139, 92, 246, 0.2); color: #a78bfa;">
+          <strong>Remember:</strong> Graded cards give you exposure to cards whose value has been "locked in" by third-party authentication. This removes condition uncertainty and makes future selling easier.
+        </p>
+      </div>
+    `;
+  };
+
+  // Generate Era Rebalancing Plan section
+  const generateEraRebalancingPlan = () => {
+    if (!eraAllocation) return '';
+    
+    const eras = [
+      { key: 'vintage' as const, label: 'Vintage', current: eraAllocation.vintage, target: eraAllocationTarget.vintage },
+      { key: 'classic' as const, label: 'Classic', current: eraAllocation.classic, target: eraAllocationTarget.classic },
+      { key: 'modern' as const, label: 'Modern', current: eraAllocation.modern, target: eraAllocationTarget.modern },
+      { key: 'ultraModern' as const, label: 'Ultra Modern', current: eraAllocation.ultraModern, target: eraAllocationTarget.ultraModern },
+      { key: 'current' as const, label: 'Current', current: eraAllocation.current, target: eraAllocationTarget.current },
+    ];
+
+    const totalUnderweight = eras.reduce((sum, era) => {
+      const targetValue = (era.target / 100) * totalValue;
+      const delta = targetValue - era.current.value;
+      return sum + (delta > 0 ? delta : 0);
+    }, 0);
+
+    const rebalanceItems = eras
+      .map(era => {
+        const targetValue = (era.target / 100) * totalValue;
+        const delta = targetValue - era.current.value;
+        const monthlyShare = delta > 0 && totalUnderweight > 0
+          ? (delta / totalUnderweight) * monthlyBudget
+          : 0;
+        const monthsNeeded = delta > 0 && monthlyShare > 0 
+          ? Math.ceil(delta / monthlyShare)
+          : 0;
+        return { ...era, delta, monthlyShare, monthsNeeded };
+      })
+      .filter(era => era.monthlyShare > 0);
+
+    if (rebalanceItems.length === 0) {
+      return `<p style="color: #4ade80; text-align: center; padding: 20px;">Your era allocation is already balanced according to your targets. No rebalancing needed!</p>`;
+    }
+
+    const maxMonths = Math.max(...rebalanceItems.map(era => era.monthsNeeded));
+    
+    // Era preset label
+    const eraPresetLabel = eraAllocationPreset === 'conservative' ? 'Conservative' : 
+                           eraAllocationPreset === 'aggressive' ? 'Aggressive' : 
+                           eraAllocationPreset === 'balanced' ? 'Balanced' : 'Custom';
+
+    return `
+      <div class="target-allocation-card">
+        <div class="target-title">Your Era Target: ${eraPresetLabel}</div>
+        <div class="target-info" style="margin-bottom: 16px;">
+          <strong>${eraAllocationTarget.vintage}%</strong> Vintage / <strong>${eraAllocationTarget.classic}%</strong> Classic / <strong>${eraAllocationTarget.modern}%</strong> Modern / <strong>${eraAllocationTarget.ultraModern}%</strong> Ultra Modern / <strong>${eraAllocationTarget.current}%</strong> Current
+        </div>
+        <div style="margin-top: 16px;">
+          <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 12px;"><strong>Suggested Monthly Allocation by Era:</strong></p>
+          ${rebalanceItems.map(era => `
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
+              <span style="color: #cbd5e1;">${era.label} Era</span>
+              <span style="color: #a78bfa; font-weight: 600;">$${Math.round(era.monthlyShare).toLocaleString()}/mo</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="margin-top: 16px; padding: 12px; background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
+          <p style="color: #a78bfa; font-weight: 600; font-size: 14px;">
+            Estimated time to reach era targets: <span style="color: #fff;">${maxMonths} month${maxMonths > 1 ? 's' : ''}</span>
           </p>
         </div>
+      </div>
+      
+      <div class="narrative-block" style="margin-top: 24px;">
+        <p style="margin-bottom: 12px;">If you moved to your custom era targets:</p>
+        <ul style="margin: 0; padding-left: 20px; color: #cbd5e1;">
+          ${rebalanceItems.map(era => `<li>Increase <strong>${era.label}</strong> by $${Math.abs(era.delta).toLocaleString()} to reach ${era.target}%</li>`).join('')}
+        </ul>
+        ${eras.filter(e => e.current.percent > e.target + 5).map(era => `
+          <p style="margin-top: 12px; color: #f59e0b;">Consider reducing <strong>${era.label}</strong> exposure — you're ${(era.current.percent - era.target).toFixed(0)}% above target.</p>
+        `).join('')}
       </div>
     `;
   };
@@ -1566,6 +1639,25 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       </div>
     </div>
     
+    <!-- Asset Type Rebalancing -->
+    <div class="section">
+      <h2 class="section-title">Rebalancing by Asset Type</h2>
+      ${generateRebalancingPlan()}
+      <div class="narrative-block">
+        <p>If you moved to your custom asset type targets, you'd shift your portfolio's risk profile accordingly. More sealed means more patience required but potentially higher long-term appreciation. More graded means better liquidity and proven condition. More raw means maximum flexibility with higher condition risk.</p>
+      </div>
+    </div>
+    
+    <!-- Era Rebalancing -->
+    <div class="section">
+      <h2 class="section-title">Rebalancing by Era</h2>
+      ${generateEraRebalancingPlan()}
+      <div class="narrative-block">
+        <p>Era allocation affects your risk-reward profile. Older eras (Vintage, Classic) offer stability and proven scarcity. Newer eras (Modern, Ultra Modern, Current) offer higher volatility but potentially faster gains if you time cycles well.</p>
+        <p style="margin-top: 16px; color: #a78bfa; font-style: italic;">It's up to you how you want to rebalance, but use this as reference to help you make those decisions.</p>
+      </div>
+    </div>
+    
     <!-- Action Plan -->
     <div class="section">
       <h2 class="section-title">Your Action Plan</h2>
@@ -1576,21 +1668,17 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       </div>
     </div>
     
-    <!-- Rebalancing Considerations -->
-    <div class="section">
-      <h2 class="section-title">Your Rebalancing Plan</h2>
-      ${generateRebalancingPlan()}
-      <div class="narrative-block">
-        ${narratives.rebalanceNarrative}
-      </div>
-    </div>
-    
     <!-- In Summary (Closing) -->
     <div class="section closing-section">
       <h2 class="section-title">In Summary</h2>
       <div class="narrative-block" style="border-left: none; text-align: left; max-width: 600px; margin: 0 auto;">
         ${narratives.closingNarrative}
       </div>
+    </div>
+    
+    <!-- Feedback -->
+    <div style="text-align: center; margin: 32px 0 16px 0;">
+      <p style="color: #94a3b8; font-size: 14px;">How did we do? <a href="https://forms.gle/your-feedback-form" target="_blank" rel="noopener noreferrer" style="color: #a78bfa; text-decoration: underline;">Please submit feedback here</a></p>
     </div>
     
     <footer class="footer">

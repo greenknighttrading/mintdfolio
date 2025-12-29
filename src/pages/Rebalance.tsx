@@ -28,7 +28,7 @@ export default function Rebalance() {
           <h1 className="text-2xl font-bold text-foreground">Rebalance Calculator</h1>
         </div>
         <p className="text-muted-foreground">
-          Set target allocations and explore rebalancing strategies
+          Set target allocations using presets or custom sliders to explore rebalancing strategies. Your selections dynamically update the insights and recommendations in your generated report.
         </p>
       </div>
 

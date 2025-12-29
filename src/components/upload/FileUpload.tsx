@@ -103,6 +103,9 @@ export function FileUpload() {
             <p className="text-sm text-muted-foreground">
               or click to browse • CSV files supported
             </p>
+            <p className="text-xs text-muted-foreground mt-3 max-w-md leading-relaxed">
+              You can upload with or without cost basis. Profit analysis is only available when cost basis is provided. Please consider reviewing and updating your data before uploading — the more accurate it is, the more helpful the insights.
+            </p>
           </div>
 
           {fileName && !isProcessing && (

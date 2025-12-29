@@ -1,13 +1,13 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import { Download, FileText, Loader2 } from "lucide-react";
+import { Download, FileText, Loader2, ArrowLeft } from "lucide-react";
 import { toPng } from "html-to-image";
+import { useNavigate } from "react-router-dom";
 
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { Button } from "@/components/ui/button";
 import { buildPortfolioReportHtml, buildPortfolioReportText } from "@/lib/reportHtml";
 import { Seo } from "@/components/seo/Seo";
 import { toast } from "sonner";
-
 export default function GeneratedReport() {
   const {
     isDataLoaded,
@@ -253,9 +253,15 @@ export default function GeneratedReport() {
       <h1 className="sr-only">Portfolio analysis report</h1>
 
       <header className="flex items-center justify-between gap-3 p-4 lg:p-6 max-w-6xl mx-auto">
-        <div className="text-sm text-muted-foreground">
-          Generated from the MintdFolio App
-        </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => window.location.href = '/'}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Button>
 
         <div className="flex items-center gap-2">
           <Button 
