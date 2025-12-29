@@ -11,6 +11,9 @@ import {
   AllocationPreset,
   ALLOCATION_PRESETS,
   EraAllocationBreakdown,
+  EraAllocationTarget,
+  EraAllocationPreset,
+  ERA_ALLOCATION_PRESETS,
 } from '@/lib/types';
 import { processPortfolioData, ColumnMapping } from '@/lib/dataParser';
 import {
@@ -68,6 +71,12 @@ interface PortfolioContextType {
   allocationPreset: AllocationPreset;
   setAllocationPreset: (preset: AllocationPreset) => void;
   setCustomTarget: (target: AllocationTarget) => void;
+  
+  // Era Targets
+  eraAllocationTarget: EraAllocationTarget;
+  eraAllocationPreset: EraAllocationPreset;
+  setEraAllocationPreset: (preset: EraAllocationPreset) => void;
+  setCustomEraTarget: (target: EraAllocationTarget) => void;
 
   // Actions
   uploadData: (csvContent: string) => void;
@@ -83,6 +92,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [detectedColumns, setDetectedColumns] = useState<ColumnMapping | null>(null);
   const [allocationPreset, setAllocationPresetState] = useState<AllocationPreset>('balanced');
   const [customTarget, setCustomTargetState] = useState<AllocationTarget>(ALLOCATION_PRESETS.custom);
+  const [eraAllocationPreset, setEraAllocationPresetState] = useState<EraAllocationPreset>('balanced');
+  const [customEraTarget, setCustomEraTargetState] = useState<EraAllocationTarget>(ERA_ALLOCATION_PRESETS.custom);
   const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [authInitialized, setAuthInitialized] = useState(false);
@@ -131,6 +142,10 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const allocationTarget = useMemo(() => {
     return allocationPreset === 'custom' ? customTarget : ALLOCATION_PRESETS[allocationPreset];
   }, [allocationPreset, customTarget]);
+
+  const eraAllocationTarget = useMemo(() => {
+    return eraAllocationPreset === 'custom' ? customEraTarget : ERA_ALLOCATION_PRESETS[eraAllocationPreset];
+  }, [eraAllocationPreset, customEraTarget]);
 
   const summary = useMemo(() => {
     if (!isDataLoaded) return null;
@@ -264,6 +279,15 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setDismissedInsights(prev => new Set([...prev, insightId]));
   }, []);
 
+  const setEraAllocationPreset = useCallback((preset: EraAllocationPreset) => {
+    setEraAllocationPresetState(preset);
+  }, []);
+
+  const setCustomEraTarget = useCallback((target: EraAllocationTarget) => {
+    setCustomEraTargetState(target);
+    setEraAllocationPresetState('custom');
+  }, []);
+
   const value: PortfolioContextType = {
     items,
     validation,
@@ -282,6 +306,10 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     allocationPreset,
     setAllocationPreset,
     setCustomTarget,
+    eraAllocationTarget,
+    eraAllocationPreset,
+    setEraAllocationPreset,
+    setCustomEraTarget,
     uploadData,
     clearData,
     dismissInsight,

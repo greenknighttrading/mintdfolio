@@ -25,7 +25,7 @@ export default function Rebalance() {
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <Scale className="w-5 h-5 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Rebalancing Simulator</h1>
+          <h1 className="text-2xl font-bold text-foreground">Rebalance Calculator</h1>
         </div>
         <p className="text-muted-foreground">
           Set target allocations and explore rebalancing strategies

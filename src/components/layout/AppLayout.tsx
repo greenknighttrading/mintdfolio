@@ -23,7 +23,7 @@ const navigation = [
   { name: 'Portfolio Health', href: '/', icon: LayoutDashboard },
   { name: 'Insight Feed', href: '/insights', icon: Lightbulb },
   { name: 'Position Performance', href: '/winners', icon: Trophy },
-  { name: 'Asset Rebalancing', href: '/rebalance', icon: Scale },
+  { name: 'Asset Type', href: '/rebalance', icon: Scale },
   { name: 'Era Allocation', href: '/era-allocation', icon: Clock },
   { name: 'Generate Report', href: '/report', icon: FileText },
 ];

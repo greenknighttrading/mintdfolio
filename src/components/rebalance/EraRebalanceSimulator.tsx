@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ArrowRight, DollarSign, Calendar, Clock, Check, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { usePortfolio } from '@/contexts/PortfolioContext';
 import { cn } from '@/lib/utils';
@@ -23,13 +23,12 @@ type RebalanceMode = 'monthly-budget' | 'target-date';
 const ERA_ORDER: PokemonEra[] = ['current', 'ultraModern', 'modern', 'classic', 'vintage'];
 
 export function EraRebalanceSimulator() {
-  const { items, summary } = usePortfolio();
+  const { items, summary, eraAllocationTarget, eraAllocationPreset, setEraAllocationPreset, setCustomEraTarget } = usePortfolio();
   
   // Pending custom allocation (independent sliders that don't auto-adjust)
-  const [pendingAllocation, setPendingAllocation] = useState<EraAllocationTarget>(ERA_ALLOCATION_PRESETS.balanced);
+  const [pendingAllocation, setPendingAllocation] = useState<EraAllocationTarget>(eraAllocationTarget);
   // Applied custom allocation (what's actually used for analysis)
-  const [appliedAllocation, setAppliedAllocation] = useState<EraAllocationTarget>(ERA_ALLOCATION_PRESETS.balanced);
-  const [allocationPreset, setAllocationPreset] = useState<EraAllocationPreset>('balanced');
+  const [appliedAllocation, setAppliedAllocation] = useState<EraAllocationTarget>(eraAllocationTarget);
   const [isCustomMode, setIsCustomMode] = useState(false);
   
   const [monthlyBudget, setMonthlyBudget] = useState(500);
@@ -38,6 +37,13 @@ export function EraRebalanceSimulator() {
 
   const totalValue = summary?.totalMarketValue || 0;
 
+  // Sync local state with context's eraAllocationTarget when it changes
+  useEffect(() => {
+    if (!isCustomMode) {
+      setPendingAllocation(eraAllocationTarget);
+      setAppliedAllocation(eraAllocationTarget);
+    }
+  }, [eraAllocationTarget, isCustomMode]);
   // Calculate era allocation from portfolio items
   const eraAllocation = useMemo(() => {
     return calculateEraAllocationBreakdown(items);
@@ -70,14 +76,14 @@ export function EraRebalanceSimulator() {
   const handleApplyCustomAllocation = () => {
     if (isValidTotal) {
       setAppliedAllocation(pendingAllocation);
-      setAllocationPreset('custom');
+      setCustomEraTarget(pendingAllocation);
     }
   };
 
   const handlePresetClick = (presetKey: EraAllocationPreset) => {
     const presetAllocation = ERA_ALLOCATION_PRESETS[presetKey];
     setIsCustomMode(false);
-    setAllocationPreset(presetKey);
+    setEraAllocationPreset(presetKey);
     setPendingAllocation(presetAllocation);
     setAppliedAllocation(presetAllocation);
   };
@@ -219,7 +225,7 @@ export function EraRebalanceSimulator() {
               onClick={() => handlePresetClick(preset.key)}
               className={cn(
                 "px-4 py-3 rounded-xl transition-all duration-200 text-left min-w-[140px]",
-                allocationPreset === preset.key && !isCustomMode
+                eraAllocationPreset === preset.key && !isCustomMode
                   ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
                   : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               )}
@@ -227,7 +233,7 @@ export function EraRebalanceSimulator() {
               <p className="font-medium">{preset.label}</p>
               <p className={cn(
                 "text-xs mt-0.5",
-                allocationPreset === preset.key && !isCustomMode ? "text-primary-foreground/80" : "text-muted-foreground"
+                eraAllocationPreset === preset.key && !isCustomMode ? "text-primary-foreground/80" : "text-muted-foreground"
               )}>
                 {preset.title} • {preset.description}
               </p>
@@ -315,7 +321,7 @@ export function EraRebalanceSimulator() {
             </Button>
           ) : (
             <div className="w-full px-4 py-3 rounded-lg bg-secondary/50 text-center">
-              <span className="text-sm text-muted-foreground">Using {allocationPreset} allocation</span>
+              <span className="text-sm text-muted-foreground">Using {eraAllocationPreset} allocation</span>
             </div>
           )}
         </div>
@@ -377,7 +383,7 @@ export function EraRebalanceSimulator() {
         <h2 className="text-lg font-semibold text-foreground mb-6">
           <span className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-primary" />
-            Rebalancing Strategy
+            Rebalance Calculator
           </span>
         </h2>
 
