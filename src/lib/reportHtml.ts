@@ -1,4 +1,4 @@
-import { AllocationBreakdown, AllocationPreset, AllocationTarget, ConcentrationRisk, EraAllocationBreakdown, Insight, PortfolioItem, PortfolioSummary, ProfitMilestone, ERA_INFO } from "@/lib/types";
+import { AllocationBreakdown, AllocationPreset, AllocationTarget, ConcentrationRisk, EraAllocationBreakdown, EraAllocationTarget, EraAllocationPreset, ERA_ALLOCATION_PRESETS, Insight, PortfolioItem, PortfolioSummary, ProfitMilestone, ERA_INFO } from "@/lib/types";
 import { HealthScoreBreakdown } from "@/contexts/PortfolioContext";
 
 // HTML escape function to prevent XSS attacks from user-supplied data
@@ -25,6 +25,8 @@ type BuildPortfolioReportHtmlParams = {
   items: PortfolioItem[];
   healthScoreBreakdown?: HealthScoreBreakdown | null;
   eraAllocation?: EraAllocationBreakdown | null;
+  eraAllocationTarget?: EraAllocationTarget;
+  eraAllocationPreset?: EraAllocationPreset;
   monthlyBudget?: number;
 };
 
@@ -39,6 +41,8 @@ export function buildPortfolioReportHtml({
   items,
   healthScoreBreakdown,
   eraAllocation,
+  eraAllocationTarget = ERA_ALLOCATION_PRESETS.balanced,
+  eraAllocationPreset = 'balanced',
   monthlyBudget = 500,
 }: BuildPortfolioReportHtmlParams) {
   // Get specific portfolio items for personalized narratives
@@ -855,16 +859,26 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
     if (!eraAllocation) return '';
     
     const eras = [
-      { key: 'vintage', ...eraAllocation.vintage, info: ERA_INFO.vintage, risk: 'Low Risk' },
-      { key: 'classic', ...eraAllocation.classic, info: ERA_INFO.classic, risk: 'Low Risk' },
-      { key: 'modern', ...eraAllocation.modern, info: ERA_INFO.modern, risk: 'Medium Risk' },
-      { key: 'ultraModern', ...eraAllocation.ultraModern, info: ERA_INFO.ultraModern, risk: 'Medium Risk' },
-      { key: 'current', ...eraAllocation.current, info: ERA_INFO.current, risk: 'High Risk' },
+      { key: 'vintage' as const, ...eraAllocation.vintage, info: ERA_INFO.vintage, risk: 'Low Risk', target: eraAllocationTarget.vintage },
+      { key: 'classic' as const, ...eraAllocation.classic, info: ERA_INFO.classic, risk: 'Low Risk', target: eraAllocationTarget.classic },
+      { key: 'modern' as const, ...eraAllocation.modern, info: ERA_INFO.modern, risk: 'Medium Risk', target: eraAllocationTarget.modern },
+      { key: 'ultraModern' as const, ...eraAllocation.ultraModern, info: ERA_INFO.ultraModern, risk: 'Medium Risk', target: eraAllocationTarget.ultraModern },
+      { key: 'current' as const, ...eraAllocation.current, info: ERA_INFO.current, risk: 'High Risk', target: eraAllocationTarget.current },
     ];
 
     const olderEraPercent = eraAllocation.vintage.percent + eraAllocation.classic.percent;
     const midModernPercent = eraAllocation.modern.percent + eraAllocation.ultraModern.percent;
     const currentPercent = eraAllocation.current.percent;
+    
+    // Target totals
+    const targetOlderPercent = eraAllocationTarget.vintage + eraAllocationTarget.classic;
+    const targetMidModernPercent = eraAllocationTarget.modern + eraAllocationTarget.ultraModern;
+    const targetCurrentPercent = eraAllocationTarget.current;
+
+    // Era preset label
+    const eraPresetLabel = eraAllocationPreset === 'conservative' ? 'Conservative' : 
+                           eraAllocationPreset === 'aggressive' ? 'Aggressive' : 
+                           eraAllocationPreset === 'balanced' ? 'Balanced' : 'Custom';
 
     return `
     <div class="section">
@@ -874,41 +888,53 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
         <div class="stat-card">
           <div class="stat-value" style="color: #4ade80; font-size: 20px;">${olderEraPercent.toFixed(0)}%</div>
           <div class="stat-label">Older Era</div>
-          <div style="font-size: 10px; color: #64748b; margin-top: 4px;">Low Risk</div>
+          <div style="font-size: 10px; color: #64748b; margin-top: 4px;">Target: ${targetOlderPercent}%</div>
         </div>
         <div class="stat-card">
           <div class="stat-value" style="color: #f59e0b; font-size: 20px;">${midModernPercent.toFixed(0)}%</div>
           <div class="stat-label">Mid Modern</div>
-          <div style="font-size: 10px; color: #64748b; margin-top: 4px;">Medium Risk</div>
+          <div style="font-size: 10px; color: #64748b; margin-top: 4px;">Target: ${targetMidModernPercent}%</div>
         </div>
         <div class="stat-card">
           <div class="stat-value" style="color: #f87171; font-size: 20px;">${currentPercent.toFixed(0)}%</div>
           <div class="stat-label">Current</div>
-          <div style="font-size: 10px; color: #64748b; margin-top: 4px;">High Risk</div>
+          <div style="font-size: 10px; color: #64748b; margin-top: 4px;">Target: ${targetCurrentPercent}%</div>
         </div>
       </div>
 
       <div style="display: grid; gap: 12px;">
-        ${eras.filter(era => era.percent > 0).map(era => `
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(15, 23, 42, 0.4); border-radius: 10px;">
+        ${eras.filter(era => era.percent > 0 || era.target > 0).map(era => {
+          const delta = era.percent - era.target;
+          const isOverweight = delta > 5;
+          const isUnderweight = delta < -5;
+          return `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(15, 23, 42, 0.4); border-radius: 10px; ${isOverweight ? 'border-left: 3px solid #f59e0b;' : isUnderweight ? 'border-left: 3px solid #8b5cf6;' : ''}">
             <div>
               <div style="color: #fff; font-weight: 500;">${era.info.name}</div>
               <div style="color: #64748b; font-size: 12px;">${era.info.years}</div>
             </div>
             <div style="text-align: right;">
-              <div style="color: #a78bfa; font-weight: 600;">${era.percent.toFixed(1)}%</div>
-              <div style="color: #64748b; font-size: 12px;">$${era.value.toLocaleString()}</div>
+              <div style="color: #a78bfa; font-weight: 600;">${era.percent.toFixed(1)}% <span style="color: #64748b; font-weight: 400;">/ ${era.target}%</span></div>
+              <div style="color: ${isOverweight ? '#f59e0b' : isUnderweight ? '#8b5cf6' : '#64748b'}; font-size: 12px;">${isOverweight ? 'Overweight' : isUnderweight ? 'Underweight' : 'On Target'}</div>
             </div>
           </div>
-        `).join('')}
+        `}).join('')}
+      </div>
+      
+      <!-- Era Target Info -->
+      <div class="target-allocation-card" style="margin-top: 24px;">
+        <div class="target-title">Your Era Target: ${eraPresetLabel}</div>
+        <div class="target-info">
+          <strong>${eraAllocationTarget.current}%</strong> Current / <strong>${eraAllocationTarget.ultraModern}%</strong> Ultra Modern / <strong>${eraAllocationTarget.modern}%</strong> Modern / <strong>${eraAllocationTarget.classic}%</strong> Classic / <strong>${eraAllocationTarget.vintage}%</strong> Vintage
+        </div>
       </div>
 
       <div class="narrative-block">
         <p style="margin-bottom: 12px;">Your era distribution affects portfolio risk:</p>
         <ul style="margin: 0; padding-left: 20px; color: #cbd5e1;">
-          <li><strong style="color: #4ade80;">Older Era (${olderEraPercent.toFixed(0)}%)</strong>: Vintage and Classic sets have proven scarcity and established value. ${olderEraPercent >= 30 ? 'Your exposure here is solid.' : 'Consider increasing your vintage/classic exposure for stability.'}</li>
-          <li><strong style="color: #f59e0b;">Mid Modern (${midModernPercent.toFixed(0)}%)</strong>: Modern and Ultra Modern sets are normalizing post-boom. ${midModernPercent >= 30 && midModernPercent <= 50 ? 'Well balanced.' : midModernPercent > 50 ? 'Heavy exposure — monitor for print run concerns.' : 'Room to add quality modern sets.'}</li>
-          <li><strong style="color: #f87171;">Current Window (${currentPercent.toFixed(0)}%)</strong>: Active print products carry the highest risk. ${currentPercent <= 15 ? 'Your current window exposure is appropriate.' : 'High exposure to active print — be prepared for volatility.'}</li>
+          <li><strong style="color: #4ade80;">Older Era (${olderEraPercent.toFixed(0)}%)</strong>: Vintage and Classic sets have proven scarcity and established value. ${olderEraPercent >= targetOlderPercent ? 'Your exposure here meets or exceeds your target.' : `Consider increasing by ${(targetOlderPercent - olderEraPercent).toFixed(0)}% to meet your target.`}</li>
+          <li><strong style="color: #f59e0b;">Mid Modern (${midModernPercent.toFixed(0)}%)</strong>: Modern and Ultra Modern sets are normalizing post-boom. ${Math.abs(midModernPercent - targetMidModernPercent) <= 10 ? 'Well balanced against your target.' : midModernPercent > targetMidModernPercent ? `Overweight by ${(midModernPercent - targetMidModernPercent).toFixed(0)}% vs target.` : `Underweight by ${(targetMidModernPercent - midModernPercent).toFixed(0)}% vs target.`}</li>
+          <li><strong style="color: #f87171;">Current Window (${currentPercent.toFixed(0)}%)</strong>: Active print products carry the highest risk. ${currentPercent <= targetCurrentPercent ? 'Your current window exposure is appropriate.' : `Overweight by ${(currentPercent - targetCurrentPercent).toFixed(0)}% — consider reducing exposure.`}</li>
         </ul>
       </div>
     </div>

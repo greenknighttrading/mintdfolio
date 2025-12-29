@@ -21,6 +21,8 @@ export default function GeneratedReport() {
     items,
     healthScoreBreakdown,
     eraAllocation,
+    eraAllocationTarget,
+    eraAllocationPreset,
   } = usePortfolio();
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -39,9 +41,11 @@ export default function GeneratedReport() {
       items,
       healthScoreBreakdown,
       eraAllocation,
+      eraAllocationTarget,
+      eraAllocationPreset,
       monthlyBudget: 500,
     });
-  }, [summary, allocation, concentration, milestones, insights, allocationTarget, allocationPreset, items, healthScoreBreakdown, eraAllocation]);
+  }, [summary, allocation, concentration, milestones, insights, allocationTarget, allocationPreset, items, healthScoreBreakdown, eraAllocation, eraAllocationTarget, eraAllocationPreset]);
 
   // Wait for iframe to fully load
   useEffect(() => {

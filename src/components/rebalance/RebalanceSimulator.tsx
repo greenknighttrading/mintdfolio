@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ArrowRight, DollarSign, Calendar, Scale, Check, AlertCircle } from 'lucide-react';
 import { usePortfolio } from '@/contexts/PortfolioContext';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,14 @@ export function RebalanceSimulator() {
   const [rebalanceMode, setRebalanceMode] = useState<RebalanceMode>('monthly-budget');
 
   const totalValue = summary?.totalMarketValue || 0;
+
+  // Sync local state with context's allocationTarget when it changes
+  useEffect(() => {
+    if (!isCustomMode) {
+      setPendingAllocation(allocationTarget);
+      setAppliedAllocation(allocationTarget);
+    }
+  }, [allocationTarget, isCustomMode]);
 
   // Calculate pending total
   const pendingTotal = pendingAllocation.sealed + pendingAllocation.slabs + pendingAllocation.rawCards;
@@ -276,7 +284,7 @@ export function RebalanceSimulator() {
         <h2 className="text-lg font-semibold text-foreground mb-6">
           <span className="flex items-center gap-2">
             <Scale className="w-5 h-5 text-primary" />
-            Rebalancing Strategy
+            Rebalance Calculator
           </span>
         </h2>
 
