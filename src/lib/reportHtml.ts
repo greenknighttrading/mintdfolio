@@ -345,22 +345,11 @@ export function buildPortfolioReportHtml({
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; justify-content: center;">
           ${archetype.howTheyCollect.map(trait => `<span style="background: rgba(139, 92, 246, 0.2); padding: 6px 12px; border-radius: 16px; font-size: 13px; color: #a78bfa;">${trait}</span>`).join('')}
         </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; max-width: 400px; margin-left: auto; margin-right: auto;">
-          <div style="background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
-            <div style="font-size: 12px; color: #4ade80; text-transform: uppercase; letter-spacing: 0.5px;">Core Strength</div>
-            <div style="font-size: 18px; font-weight: 600; color: #fff; margin-top: 4px;">${archetype.coreStrength}</div>
-          </div>
-          <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
-            <div style="font-size: 12px; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.5px;">Trade-Off</div>
-            <div style="font-size: 18px; font-weight: 600; color: #fff; margin-top: 4px;">${archetype.tradeOff}</div>
-          </div>
-        </div>
       </div>
       
       <div class="section">
         <h2 class="section-title">What This Says About You</h2>
-        <p style="color: #cbd5e1; font-size: 15px; line-height: 1.8;">${archetype.whatItSays}</p>
+        <p style="color: #cbd5e1; font-size: 15px; line-height: 1.8;">${archetype.whatItSays} Your core strength is <strong style="color: #4ade80;">${archetype.coreStrength}</strong>, though this comes with a trade-off: <strong style="color: #fbbf24;">${archetype.tradeOff}</strong>.</p>
       </div>
     `;
   };
@@ -1378,14 +1367,19 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
 </head>
 <body>
   <div class="container">
-    <header class="header">
-      <div class="logo">mintdfolio</div>
-      <p class="subtitle">Portfolio Analysis Report</p>
-      <p class="date">Generated on ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-    </header>
-    
     <!-- Collector Profile Section (Archetype) -->
     ${generateArchetypeSection()}
+    
+    <!-- Portfolio Analysis - moved right after What This Says About You -->
+    <div class="section">
+      <h2 class="section-title">Portfolio Analysis</h2>
+      <div class="narrative-block">
+        <p style="margin-bottom: 16px;">${getPortfolioAnalysisContent().dataShowsParagraph}</p>
+        <p style="margin-bottom: 16px;">${getPortfolioAnalysisContent().whyParagraph}</p>
+        <p style="margin-bottom: 16px;">${getPortfolioAnalysisContent().strengthsParagraph}</p>
+        <p style="color: #a78bfa;">${getPortfolioAnalysisContent().nudgeParagraph}</p>
+      </div>
+    </div>
     
     <!-- Portfolio Overview -->
     <div class="section">
@@ -1404,11 +1398,6 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
           <div class="stat-label">Return</div>
         </div>
       </div>
-      
-      <div class="narrative-block">
-        <div class="narrative-title">How I'm Reading These Numbers</div>
-        ${narratives.overviewNarrative}
-      </div>
     </div>
     
     <!-- Health Score -->
@@ -1419,56 +1408,60 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
         <p style="color: #94a3b8; font-size: 14px;">out of 100</p>
       </div>
       
-      ${healthScoreBreakdown ? `
+      ${healthScoreBreakdown ? (() => {
+        const assetPercent = Math.round((healthScoreBreakdown.assetScore / 45) * 100);
+        const eraPercent = Math.round((healthScoreBreakdown.eraScore / 35) * 100);
+        const concentrationPercent = Math.round((healthScoreBreakdown.concentrationScore / 20) * 100);
+        
+        // Determine which area needs caution
+        const lowestScore = Math.min(assetPercent, eraPercent, concentrationPercent);
+        let cautionArea = '';
+        if (lowestScore === assetPercent && assetPercent < 70) {
+          cautionArea = 'asset allocation';
+        } else if (lowestScore === eraPercent && eraPercent < 70) {
+          cautionArea = 'era balance';
+        } else if (lowestScore === concentrationPercent && concentrationPercent < 70) {
+          cautionArea = 'concentration';
+        }
+        
+        return `
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 24px; margin-bottom: 24px;">
         <div style="background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="color: #94a3b8; font-size: 13px;">Asset Allocation</span>
-            <span style="color: ${healthScoreBreakdown.assetScore >= 35 ? '#4ade80' : healthScoreBreakdown.assetScore >= 25 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${healthScoreBreakdown.assetScore.toFixed(0)}/45</span>
+            <span style="color: ${assetPercent >= 78 ? '#4ade80' : assetPercent >= 55 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${assetPercent}/100</span>
           </div>
-          <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px;">
-            <div style="background: ${healthScoreBreakdown.assetScore >= 35 ? '#4ade80' : healthScoreBreakdown.assetScore >= 25 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${(healthScoreBreakdown.assetScore / 45) * 100}%;"></div>
+          <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden;">
+            <div style="background: ${assetPercent >= 78 ? '#4ade80' : assetPercent >= 55 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${Math.min(assetPercent, 100)}%;"></div>
           </div>
           <p style="color: #64748b; font-size: 11px; margin-top: 8px;">Sealed/graded/raw mix vs targets</p>
         </div>
         <div style="background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="color: #94a3b8; font-size: 13px;">Era Balance</span>
-            <span style="color: ${healthScoreBreakdown.eraScore >= 28 ? '#4ade80' : healthScoreBreakdown.eraScore >= 20 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${healthScoreBreakdown.eraScore.toFixed(0)}/35</span>
+            <span style="color: ${eraPercent >= 80 ? '#4ade80' : eraPercent >= 57 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${eraPercent}/100</span>
           </div>
-          <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px;">
-            <div style="background: ${healthScoreBreakdown.eraScore >= 28 ? '#4ade80' : healthScoreBreakdown.eraScore >= 20 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${(healthScoreBreakdown.eraScore / 35) * 100}%;"></div>
+          <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden;">
+            <div style="background: ${eraPercent >= 80 ? '#4ade80' : eraPercent >= 57 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${Math.min(eraPercent, 100)}%;"></div>
           </div>
           <p style="color: #64748b; font-size: 11px; margin-top: 8px;">Vintage, modern, current distribution</p>
         </div>
         <div style="background: rgba(15, 23, 42, 0.6); border-radius: 10px; padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="color: #94a3b8; font-size: 13px;">Concentration</span>
-            <span style="color: ${healthScoreBreakdown.concentrationScore >= 16 ? '#4ade80' : healthScoreBreakdown.concentrationScore >= 10 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${healthScoreBreakdown.concentrationScore.toFixed(0)}/20</span>
+            <span style="color: ${concentrationPercent >= 80 ? '#4ade80' : concentrationPercent >= 50 ? '#fbbf24' : '#f87171'}; font-weight: 600;">${concentrationPercent}/100</span>
           </div>
-          <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px;">
-            <div style="background: ${healthScoreBreakdown.concentrationScore >= 16 ? '#4ade80' : healthScoreBreakdown.concentrationScore >= 10 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${(healthScoreBreakdown.concentrationScore / 20) * 100}%;"></div>
+          <div style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden;">
+            <div style="background: ${concentrationPercent >= 80 ? '#4ade80' : concentrationPercent >= 50 ? '#fbbf24' : '#f87171'}; border-radius: 4px; height: 100%; width: ${Math.min(concentrationPercent, 100)}%;"></div>
           </div>
           <p style="color: #64748b; font-size: 11px; margin-top: 8px;">Position and set diversification</p>
         </div>
       </div>
-      ` : ''}
-      
-      <div class="narrative-block">
-        ${narratives.healthNarrative}
-      </div>
-    </div>
-    
-    <!-- Portfolio Analysis -->
-    <div class="section">
-      <h2 class="section-title">Portfolio Analysis</h2>
-      <div class="narrative-block">
-        <p style="margin-bottom: 16px;">${getPortfolioAnalysisContent().dataShowsParagraph}</p>
-        <p style="margin-bottom: 16px;">${getPortfolioAnalysisContent().whyParagraph}</p>
-        <p style="margin-bottom: 16px;">${getPortfolioAnalysisContent().strengthsParagraph}</p>
-        <p style="color: #a78bfa;">${getPortfolioAnalysisContent().nudgeParagraph}</p>
-      </div>
-    </div>
+      <p style="color: #cbd5e1; font-size: 14px; text-align: center; margin-top: 16px;">
+        Your portfolio health score is <strong>${healthScore}</strong>.${cautionArea ? ` Your <strong style="color: #fbbf24;">${cautionArea}</strong> is an area of caution to monitor.` : ' All areas are looking healthy.'}
+      </p>
+      `;
+      })() : ''}
     
     <!-- Allocation Breakdown with Target -->
     <div class="section">
@@ -1580,17 +1573,18 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
       </div>
     </div>
     
-    <!-- My Takeaway (Closing) -->
+    <!-- In Summary (Closing) -->
     <div class="section closing-section">
-      <h2 class="section-title">My Takeaway</h2>
+      <h2 class="section-title">In Summary</h2>
       <div class="narrative-block" style="border-left: none; text-align: left; max-width: 600px; margin: 0 auto;">
         ${narratives.closingNarrative}
       </div>
     </div>
     
     <footer class="footer">
-      <p>Generated by mintdfolio • Your Pokémon Financial Advisor</p>
-      <p style="margin-top: 8px;">This report is for informational purposes only. Not financial advice. Market conditions change—always do your own research.</p>
+      <p>Report generated by MintdFolio</p>
+      <p style="margin-top: 8px;">Generated on ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      <p style="margin-top: 8px; font-size: 11px; color: #64748b;">This report is for informational purposes only. Not financial advice. Market conditions change—always do your own research.</p>
     </footer>
   </div>
   <script>
