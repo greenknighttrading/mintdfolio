@@ -78,7 +78,7 @@ export function RebalanceSimulator() {
       { key: 'rawCards' as const, label: 'Raw Cards', current: allocation.rawCards, target: appliedAllocation.rawCards },
     ];
 
-    // Calculate total underweight amount (what needs to be added)
+    // Calculate total underweight amount (what needs to be added) - only for categories that need to INCREASE
     const totalUnderweight = categories.reduce((sum, cat) => {
       const targetValue = (cat.target / 100) * totalValue;
       const delta = targetValue - cat.current.value;
@@ -92,9 +92,12 @@ export function RebalanceSimulator() {
       const deltaPercent = cat.target - cat.current.percent;
 
       // For monthly budget mode: calculate share of monthly budget
-      const monthlyShare = deltaPercent > 0 && totalUnderweight > 0
-        ? (delta / totalUnderweight) * monthlyBudget
-        : 0;
+      // Only allocate to categories that need to INCREASE (delta > 0)
+      // Distribute proportionally based on how much each category needs
+      let monthlyShare = 0;
+      if (delta > 0 && totalUnderweight > 0) {
+        monthlyShare = (delta / totalUnderweight) * monthlyBudget;
+      }
 
       // For target date mode: calculate required monthly contribution
       const monthsToRebalance = targetMonths;
@@ -361,15 +364,29 @@ export function RebalanceSimulator() {
               
               <div className="grid gap-3">
                 {rebalanceAnalysis
-                  .filter(cat => cat.monthlyShare > 0)
-                  .sort((a, b) => b.monthlyShare - a.monthlyShare)
+                  .sort((a, b) => b.delta - a.delta)
                   .map((cat) => (
                     <div
                       key={cat.key}
-                      className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20"
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg",
+                        cat.monthlyShare > 0 
+                          ? "bg-primary/5 border border-primary/20"
+                          : "bg-secondary/30 border border-border"
+                      )}
                     >
-                      <span className="text-sm text-foreground">{cat.label}</span>
-                      <span className="text-sm font-medium text-primary tabular-nums">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-foreground">{cat.label}</span>
+                        {cat.delta < 0 && (
+                          <span className="text-xs text-warning">
+                            Overweight — reduce or hold
+                          </span>
+                        )}
+                      </div>
+                      <span className={cn(
+                        "text-sm font-medium tabular-nums",
+                        cat.monthlyShare > 0 ? "text-primary" : "text-muted-foreground"
+                      )}>
                         ${Math.round(cat.monthlyShare).toLocaleString()}/mo
                       </span>
                     </div>
