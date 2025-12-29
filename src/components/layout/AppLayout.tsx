@@ -44,8 +44,8 @@ export function AppLayout({ children }: AppLayoutProps) {
               <TrendingUp className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-foreground">Portfolio Coach</h1>
-              <p className="text-xs text-muted-foreground">Collectible Intelligence</p>
+              <h1 className="text-lg font-semibold text-foreground">PokeIQ</h1>
+              <p className="text-xs text-muted-foreground">Collectible intelligence</p>
             </div>
           </div>
 
@@ -99,15 +99,23 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Upload New Data */}
           <div className="px-4 py-4 border-t border-border">
-            <NavLink
-              to="/"
+            <button
+              onClick={() => {
+                if (isDataLoaded) {
+                  // Show credits popup for existing users
+                  alert("You're Out of Upload Credits\n\nYou're currently on the Free plan, which includes a limited number of uploads.\n\nUpgrade to Pro for more uploads — more features coming soon.");
+                } else {
+                  // Navigate to home for new uploads
+                  window.location.href = '/';
+                }
+              }}
               className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg bg-secondary/50 text-secondary-foreground hover:bg-secondary transition-colors"
             >
               <Upload className="w-4 h-4" />
               <span className="text-sm font-medium">
                 {isDataLoaded ? 'Upload New Data' : 'Upload Portfolio'}
               </span>
-            </NavLink>
+            </button>
           </div>
         </div>
       </aside>
@@ -119,7 +127,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
               <TrendingUp className="w-4 h-4 text-primary" />
             </div>
-            <h1 className="text-base font-semibold">Portfolio Coach</h1>
+            <h1 className="text-base font-semibold">PokeIQ</h1>
           </div>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
