@@ -55,11 +55,11 @@ export default function Index() {
             <div className="mt-4 text-center">
               <button
                 onClick={() => {
-                  const csvContent = `"Set","Product Name","Grade","Card Condition","Average Cost Paid","Quantity","Market Price","Date Added","Date Purchased"
-"REQUIRED: Set/Series name","REQUIRED: Product or card name","Leave blank if not graded (e.g., PSA 10, BGS 9.5)","Leave blank if sealed (e.g., NM, LP, MP)","Your cost per unit (optional - leave blank if unknown)","REQUIRED: How many you own","REQUIRED: Current market value per unit","When added to collection (YYYY-MM-DD)","When purchased (optional, YYYY-MM-DD)"
-"Scarlet & Violet 151","Booster Box","","","89.99","2","159.99","2024-01-15","2023-12-01"
-"Crown Zenith","Charizard VSTAR #GG70","PSA 10","","150.00","1","285.00","2024-03-20","2024-02-14"
-"Evolving Skies","Umbreon V Alt Art #215","","NM","45.00","1","180.00","2024-06-01",""`;
+                  const csvContent = `"Set","Product Name","Grade","Card Condition","Average Cost Paid","Quantity","Market Price","Date Purchased"
+"REQUIRED: Set/Series name","REQUIRED: Product or card name","Leave blank if not graded (e.g., PSA 10, BGS 9.5)","Leave blank if sealed (e.g., NM, LP, MP)","Your cost per unit (optional - leave blank if unknown)","REQUIRED: How many you own","REQUIRED: Current market value per unit","When purchased (optional, YYYY-MM-DD)"
+"Scarlet & Violet 151","Booster Box","","","89.99","2","159.99","2023-12-01"
+"Crown Zenith","Charizard VSTAR #GG70","PSA 10","","150.00","1","285.00","2024-02-14"
+"Evolving Skies","Umbreon V Alt Art #215","","NM","45.00","1","180.00",""`;
                   
                   const blob = new Blob([csvContent], { type: 'text/csv' });
                   const url = URL.createObjectURL(blob);
@@ -73,7 +73,7 @@ export default function Index() {
                 }}
                 className="text-sm text-primary hover:text-primary/80 underline underline-offset-4 transition-colors"
               >
-                Don't have Collectr? Manually enter data →
+                Don't have Collectr? Manually enter data & Upload CSV →
               </button>
             </div>
           </div>
