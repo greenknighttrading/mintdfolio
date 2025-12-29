@@ -55,91 +55,355 @@ export function buildPortfolioReportHtml({
            name.includes('shrouded') || name.includes('stellar') || name.includes('2024') || name.includes('2023');
   });
 
-  const getCollectorType = () => {
-    if (!allocation) return { type: "Balanced Collector", description: "", extended: "" };
+  // Determine archetype based on portfolio characteristics
+  const getCollectorArchetype = () => {
+    if (!allocation) return null;
 
     const sealed = allocation.sealed.percent;
     const slabs = allocation.slabs.percent;
     const raw = allocation.rawCards.percent;
-
-    // Build specific description based on their holdings - escape all product names
-    const topSealedProducts = sealedItems.slice(0, 3).map(i => escapeHtml(i.productName)).join(', ');
-    const topSlabs = slabItems.slice(0, 3).map(i => escapeHtml(i.productName)).join(', ');
-    const sealedCount = sealedItems.length;
-    const slabCount = slabItems.length;
-    const rawCount = rawItems.length;
-    const avgHoldingValue = items.length > 0 ? (summary?.totalMarketValue || 0) / items.length : 0;
-    const largestPosition = biggestHoldings[0];
-    const largestPositionName = escapeHtml(largestPosition?.productName);
-    const totalValue = summary?.totalMarketValue || 0;
-
-    if (sealed >= 50) {
-      return {
-        type: "The Vault Keeper",
-        description: `With ${sealed.toFixed(0)}% of your portfolio in sealed products${topSealedProducts ? ` like ${topSealedProducts}` : ''}, you're clearly playing the long game. You understand that sealed products only become more scarce over time.`,
-        extended: `This collecting philosophy requires a specific temperament. You're comfortable watching market prices fluctuate while your sealed boxes sit untouched. That's psychological discipline most collectors don't have.<br><br>
-
-Your ${sealedCount} sealed positions averaging $${avgHoldingValue.toLocaleString()} each tell a story of deliberate accumulation, not impulse buying. What defines a Vault Keeper isn't just the allocation — it's the conviction behind it.<br><br>
-
-You've made a bet that the Pokémon TCG will continue to grow, that sealed product scarcity compounds over time, and that patience will be rewarded. History supports this thesis. First edition sealed products from the early 2000s have appreciated thousands of percent.<br><br>
-
-The trade-off you've accepted: liquidity risk and opportunity cost. Sealed can be harder to move quickly, and you're not capturing gains from graded card spikes. But you've decided that's okay because you're playing a different game — one measured in years, not months.${largestPosition ? `<br><br>Your largest position, ${largestPositionName} at $${largestPosition.totalMarketValue.toLocaleString()}, represents ${((largestPosition.totalMarketValue / totalValue) * 100).toFixed(0)}% of your total holdings.` : ''}`
-      };
-    } else if (slabs >= 50) {
-      return {
-        type: "The Trophy Hunter",
-        description: `Your collection is ${slabs.toFixed(0)}% graded cards${topSlabs ? `, featuring pieces like ${topSlabs}` : ''}. You've chosen authenticated excellence over quantity, and each slab represents a deliberate choice.`,
-        extended: `Trophy Hunters aren't just collectors — you're curators. Every graded card in your ${slabCount}-piece collection passed a deliberate filter: Is it worth the grading fee? Is the condition exceptional? Is there a market for this specific card?<br><br>
-
-That filtering process means you're not accumulating noise. You're building a gallery. The psychology of a Trophy Hunter is interesting — you've accepted a premium for authentication and condition certainty.<br><br>
-
-PSA, CGC, or BGS cases aren't just plastic — they're proof of provenance and protection against condition deterioration. You've paid for that peace of mind, and that's a valid choice for a serious collection.<br><br>
-
-Your approach also gives you something sealed collectors don't have: easier exit options. Graded cards have established price discovery on eBay, PWCC, and other platforms. When you need to sell, you can move faster than someone trying to offload a case of booster boxes.${topSlabs ? `<br><br>Your featured pieces — ${topSlabs} — represent the core of your thesis. These aren't random purchases; they're positions you believe in.` : ''}`
-      };
-    } else if (raw >= 50) {
-      return {
-        type: "The Volume Player",
-        description: `With ${raw.toFixed(0)}% in raw cards across ${rawItems.length} holdings, you're hunting for value and grading candidates. You see opportunity where others see risk.`,
-        extended: `Volume Players operate in a different space than other collectors. You're comfortable with condition uncertainty, and you see raw cards as options contracts — each one has potential upside if graded, but you're not paying the premium until you know it's worth it.<br><br>
-
-That's arbitrage thinking. Your ${rawCount} raw card positions suggest you're either actively hunting for grading candidates, building a personal collection without premium concerns, or both.<br><br>
-
-The average raw card in your portfolio is worth $${(rawItems.reduce((sum, i) => sum + i.totalMarketValue, 0) / (rawCount || 1)).toLocaleString()}, which tells me about your typical price point and risk tolerance.<br><br>
-
-The Volume Player strategy has real advantages: lower entry costs per position, more diversification, and the flexibility to grade selectively. The risks? Condition uncertainty affects resale value, and raw cards without authentication can be harder to sell to serious buyers.<br><br>
-
-If you're playing this right, you're constantly evaluating which cards deserve grading investment. The best Volume Players know their cards well enough to spot the PSA 10 candidates before paying for authentication.`
-      };
-    } else if (sealed >= 30 && slabs >= 30) {
-      return {
-        type: "The Strategic Diversifier",
-        description: `Your balanced ${sealed.toFixed(0)}% sealed / ${slabs.toFixed(0)}% graded split shows sophisticated thinking. You've built a fortress with both long-term appreciation potential and liquid, authenticated assets.`,
-        extended: `Strategic Diversifiers are rare. Most collectors skew heavily toward one category based on personal preference or market momentum. You've resisted that pull and built a portfolio that can perform in multiple market conditions.<br><br>
-
-Your ${sealed.toFixed(0)}% sealed allocation gives you exposure to the long-term scarcity thesis. Your ${slabs.toFixed(0)}% graded allocation provides liquidity and proven value. Together, they create optionality.<br><br>
-
-You can hold sealed for the long game while using graded positions for tactical plays or liquidity needs. This approach reflects portfolio theory applied to collectibles. You're not betting everything on one outcome.<br><br>
-
-If sealed products surge, you participate. If graded cards dominate the next bull run, you're there too. The cost of this diversification? You may not capture the full upside if one category massively outperforms.<br><br>
-
-With ${items.length} total positions across categories, you've built genuine diversification. Your largest holding${largestPosition ? `, ${largestPositionName},` : ''} isn't dominating the portfolio, which means no single thesis failure can devastate your collection.`
-      };
+    const positionCount = items.length;
+    const avgPositionValue = items.length > 0 ? (summary?.totalMarketValue || 0) / items.length : 0;
+    
+    // Era calculations
+    const vintageItems = items.filter(i => {
+      const name = i.productName.toLowerCase();
+      return name.includes('base set') || name.includes('jungle') || name.includes('fossil') || 
+             name.includes('team rocket') || name.includes('gym') || name.includes('neo') ||
+             name.includes('1st edition') || name.includes('shadowless') || name.includes('1999') || 
+             name.includes('2000') || name.includes('2001') || name.includes('2002');
+    });
+    const vintagePercent = vintageItems.length > 0 ? (vintageItems.reduce((sum, i) => sum + i.totalMarketValue, 0) / (summary?.totalMarketValue || 1)) * 100 : 0;
+    
+    const newerItems = items.filter(i => {
+      const name = i.productName.toLowerCase();
+      return name.includes('151') || name.includes('obsidian') || name.includes('paldea') || 
+             name.includes('prismatic') || name.includes('surging') || name.includes('twilight') ||
+             name.includes('shrouded') || name.includes('stellar') || name.includes('2024') || name.includes('2023');
+    });
+    const newerPercent = newerItems.length > 0 ? (newerItems.reduce((sum, i) => sum + i.totalMarketValue, 0) / (summary?.totalMarketValue || 1)) * 100 : 0;
+    
+    // Top position concentration
+    const sortedByValue = [...items].sort((a, b) => b.totalMarketValue - a.totalMarketValue);
+    const top1Percent = sortedByValue.length > 0 ? (sortedByValue[0].totalMarketValue / (summary?.totalMarketValue || 1)) * 100 : 0;
+    const top3Percent = sortedByValue.slice(0, 3).reduce((sum, i) => sum + i.totalMarketValue, 0) / (summary?.totalMarketValue || 1) * 100;
+    
+    // Determine archetype
+    // 🛡️ The Sentinel - Sealed-heavy, broad spread, long holds
+    if (sealed >= 50 && positionCount >= 5) {
+      return 'sentinel';
     }
+    // 🗳️ The Politician - Even mix, flexible positioning
+    if (Math.abs(sealed - slabs) < 15 && Math.abs(slabs - raw) < 15 && sealed > 20 && slabs > 20 && raw > 20) {
+      return 'politician';
+    }
+    // 🔥 The Purist - Raw and slab heavy, strong attachment
+    if ((raw + slabs) >= 60 && raw >= 25 && slabs >= 25) {
+      return 'purist';
+    }
+    // 💼 The Hustler - Many positions, smaller average size
+    if (positionCount >= 20 && avgPositionValue < 500) {
+      return 'hustler';
+    }
+    // 📜 The Archivist - Vintage focus, long holds
+    if (vintagePercent >= 30) {
+      return 'archivist';
+    }
+    // 🧭 The Wayfinder - Newer sets, attention-aware
+    if (newerPercent >= 40) {
+      return 'wayfinder';
+    }
+    // 🗺️ The Cartographer - Deep focus on specific sets
+    if (top3Percent >= 50 && positionCount <= 15) {
+      return 'cartographer';
+    }
+    // 🧱 The Keystone - Iconic Pokemon, blue-chip, cross-era
+    if (top1Percent >= 20 && slabs >= 30) {
+      return 'keystone';
+    }
+    // 🚩 The Pathbreaker - Few concentrated positions, contrarian
+    if (positionCount <= 10 && top1Percent >= 25) {
+      return 'pathbreaker';
+    }
+    // 🕵️ The Detective - Under-the-radar, long quiet holds
+    if (newerPercent < 20 && vintagePercent < 20 && positionCount >= 8) {
+      return 'detective';
+    }
+    // Default to Sentinel for sealed-heavy or Politician for balanced
+    if (sealed >= 40) return 'sentinel';
+    return 'politician';
+  };
 
-    return {
-      type: "The Balanced Collector",
-      description: `With ${sealed.toFixed(0)}% sealed, ${slabs.toFixed(0)}% graded, and ${raw.toFixed(0)}% raw across ${items.length} total holdings, you're not putting all your eggs in one basket. That's a strength.`,
-      extended: `Balanced Collectors take a pragmatic approach. You haven't committed fully to any single strategy, and that's not weakness — it's flexibility. Your ${items.length} holdings across all three categories mean you can adapt as the market evolves.<br><br>
+  const archetypeData: Record<string, {
+    emoji: string;
+    name: string;
+    subtitle: string;
+    role: string;
+    howTheyCollect: string[];
+    whatItSays: string;
+    coreStrength: string;
+    tradeOff: string;
+  }> = {
+    sentinel: {
+      emoji: '🛡️',
+      name: 'The Sentinel',
+      subtitle: 'A patient guardian.',
+      role: 'Guardian of time and scarcity',
+      howTheyCollect: ['Sealed-heavy', 'Broad spread across products', 'Low turnover, long holds'],
+      whatItSays: "You're calm, patient, and unreactive. You don't feel pressure to constantly act, and you trust that time is your strongest ally. While others chase momentum, you stand watch. You believe the best moves are often the ones you don't make.",
+      coreStrength: 'Discipline',
+      tradeOff: 'Liquidity and speed'
+    },
+    politician: {
+      emoji: '🗳️',
+      name: 'The Politician',
+      subtitle: 'A master negotiator.',
+      role: 'Master of balance and negotiation',
+      howTheyCollect: ['Even mix of sealed, slabs, and raw', 'Flexible positioning', 'Willing to adjust allocations over time'],
+      whatItSays: "You're pragmatic and adaptable. You don't fall in love with absolutes — you manage trade-offs. You like having options and leverage, and you're comfortable shifting when conditions change. You win by staying reasonable when others polarize.",
+      coreStrength: 'Resilience',
+      tradeOff: 'Rarely all-in on one idea'
+    },
+    purist: {
+      emoji: '🔥',
+      name: 'The Purist',
+      subtitle: 'A devotee of conviction.',
+      role: 'Devotee of conviction and aesthetics',
+      howTheyCollect: ['Raw- and slab-heavy', 'Strong attachment to specific Pokémon, artists, or themes', 'Less concern for optimization'],
+      whatItSays: "You collect with your gut. You care about how a card feels, not just how it performs. Volatility doesn't scare you because belief matters more than comfort. Your collection is personal — and that's the point.",
+      coreStrength: 'Authentic conviction',
+      tradeOff: 'Higher variance'
+    },
+    hustler: {
+      emoji: '💼',
+      name: 'The Hustler',
+      subtitle: 'A grinding operator.',
+      role: 'Operator of volume and repetition',
+      howTheyCollect: ['Many positions', 'Smaller average position size', 'Frequent activity and turnover'],
+      whatItSays: "You trust process over perfection. You're comfortable grinding edges and stacking small wins. You don't need every move to be a home run — consistency is your weapon. You stay active while others overthink.",
+      coreStrength: 'Momentum through action',
+      tradeOff: 'Burnout and thin margins'
+    },
+    archivist: {
+      emoji: '📜',
+      name: 'The Archivist',
+      subtitle: 'A keeper of history.',
+      role: 'Keeper of history',
+      howTheyCollect: ['Vintage and early-era focus', 'Long hold times', 'Low exposure to current hype'],
+      whatItSays: "You value permanence. You're drawn to cards that have already proven their place in the canon. You're less interested in what's next and more interested in what lasts. Your collection feels like a library, not a trading desk.",
+      coreStrength: 'Stability',
+      tradeOff: 'Slower growth cycles'
+    },
+    wayfinder: {
+      emoji: '🧭',
+      name: 'The Wayfinder',
+      subtitle: 'A navigator of trends.',
+      role: 'Navigator of shifting terrain',
+      howTheyCollect: ['Newer sets and rising cards', 'Shorter-to-medium holds', 'Attention-aware positioning'],
+      whatItSays: "You read the room well. You understand that value follows attention, and you're comfortable moving with it. You don't fight the tide — you learn how to travel it.",
+      coreStrength: 'Timing',
+      tradeOff: 'Volatility exposure'
+    },
+    cartographer: {
+      emoji: '🗺️',
+      name: 'The Cartographer',
+      subtitle: 'A mapper of worlds.',
+      role: 'Mapper of worlds',
+      howTheyCollect: ['Deep focus on specific sets or eras', 'High internal coherence', 'Completion-oriented behavior'],
+      whatItSays: "You like understanding the whole picture. Finishing something matters to you. Your collection feels intentional and structured — not random. You collect systems, not just cards.",
+      coreStrength: 'Coherence',
+      tradeOff: 'Concentration risk'
+    },
+    keystone: {
+      emoji: '🧱',
+      name: 'The Keystone',
+      subtitle: 'A foundation builder.',
+      role: 'Foundation builder',
+      howTheyCollect: ['Iconic Pokémon and blue-chip cards', 'Cross-era anchors', 'Low turnover, high confidence'],
+      whatItSays: "You build around pieces meant to last. You want your collection to hold weight — emotionally and structurally. Everything else connects back to a few central pillars.",
+      coreStrength: 'Endurance',
+      tradeOff: 'Less experimentation'
+    },
+    pathbreaker: {
+      emoji: '🚩',
+      name: 'The Pathbreaker',
+      subtitle: 'A pioneer of belief.',
+      role: 'Pioneer of belief',
+      howTheyCollect: ['Few, highly concentrated positions', 'Early or contrarian bets', 'Strong personal thesis'],
+      whatItSays: "You're comfortable standing alone. You don't need consensus to act — you need belief. You accept being early, even wrong for a while, because you trust where the road leads.",
+      coreStrength: 'Asymmetry',
+      tradeOff: 'Drawdowns before payoff'
+    },
+    detective: {
+      emoji: '🕵️',
+      name: 'The Detective',
+      subtitle: 'A seeker of hidden signals.',
+      role: 'Seeker of hidden signals',
+      howTheyCollect: ['Under-the-radar sets and cards', 'Long quiet holds', 'Low hype exposure'],
+      whatItSays: "You notice details others miss. You're curious, observant, and patient. You don't need validation right away — discovery is the reward. When something finally clicks, you're already there.",
+      coreStrength: 'Early insight',
+      tradeOff: 'Long waits for recognition'
+    }
+  };
 
-The truth about Pokémon collecting is that no one knows which category will outperform in the next cycle. Sealed had its moment. Vintage graded cards had theirs. Modern graded is having one now.<br><br>
-
-By maintaining exposure across categories, you're positioned to benefit from whichever wave comes next. Your ${sealed.toFixed(0)}% sealed / ${slabs.toFixed(0)}% graded / ${raw.toFixed(0)}% raw distribution shows organic growth rather than a forced strategy.<br><br>
-
-You've collected what interests you while maintaining reasonable diversification. That's sustainable. The Balanced Collector's challenge is ensuring intentionality — it's easy for this profile to become "random accumulation" without clear targets.<br><br>
-
-The fact that you're analyzing your portfolio suggests you're thinking about this strategically — and that's what separates successful balanced collectors from unfocused ones.`
+  const generateArchetypeSection = () => {
+    const archetypeKey = getCollectorArchetype();
+    if (!archetypeKey || !archetypeData[archetypeKey]) return '';
+    
+    const archetype = archetypeData[archetypeKey];
+    const sealed = allocation?.sealed.percent || 0;
+    const slabs = allocation?.slabs.percent || 0;
+    const raw = allocation?.rawCards.percent || 0;
+    const sealedCount = sealedItems.length;
+    const topSealedNames = sealedItems.slice(0, 3).map(i => escapeHtml(i.productName)).join(', ');
+    const topSlabNames = slabItems.slice(0, 3).map(i => escapeHtml(i.productName)).join(', ');
+    
+    // Get era and category concentration
+    const eraConcentration = eraAllocation ? Object.entries(eraAllocation).sort((a, b) => b[1].percent - a[1].percent)[0] : null;
+    const dominantEra = eraConcentration ? eraConcentration[0] : 'mixed';
+    const dominantEraPercent = eraConcentration ? eraConcentration[1].percent : 0;
+    
+    // Determine values for data section
+    const sealedDiff = allocationTarget.sealed - sealed;
+    const overUnder = sealedDiff > 0 ? 'under' : 'over';
+    const diffAmount = Math.abs(sealedDiff);
+    
+    // Personality traits based on archetype
+    const personalityTraits: Record<string, string[]> = {
+      sentinel: ["You don't panic easily.", "You'd rather be early than loud.", "You trust time more than timing."],
+      politician: ["You like having options.", "You're comfortable with compromise.", "You adapt without abandoning."],
+      purist: ["You trust your instincts, even when others don't.", "Aesthetics matter to you.", "You collect with conviction."],
+      hustler: ["You'd rather act than wait.", "You learn by doing.", "Small wins compound."],
+      archivist: ["History speaks to you.", "You respect what has lasted.", "Patience is your edge."],
+      wayfinder: ["You read momentum well.", "You're not afraid to move.", "Attention is information."],
+      cartographer: ["Completion drives you.", "You see systems, not just pieces.", "Structure matters."],
+      keystone: ["You build around pillars.", "Quality over quantity.", "Your core is intentional."],
+      pathbreaker: ["You're comfortable being early.", "Conviction beats consensus.", "You accept temporary pain."],
+      detective: ["You notice what others miss.", "Discovery is the reward.", "Quiet confidence."]
     };
+    
+    const strengthsByArchetype: Record<string, string[]> = {
+      sentinel: ["People like you tend to do well in flat or boring markets.", "Your style rewards patience and conviction.", "You're less likely to make emotional decisions."],
+      politician: ["This is one of the most resilient styles.", "You can weather different market environments.", "Flexibility protects you from being wrong."],
+      purist: ["Your conviction creates natural holding power.", "You won't sell at the wrong time from fear.", "Personal connection drives discipline."],
+      hustler: ["Activity builds market intuition.", "You learn faster than passive collectors.", "Volume creates opportunities."],
+      archivist: ["Vintage has proven staying power.", "Your collection has historical significance.", "You hold what others wish they had."],
+      wayfinder: ["Timing can multiply returns.", "You capture attention-driven moves.", "You're positioned for new cycles."],
+      cartographer: ["Deep knowledge creates edge.", "Completion adds premium value.", "You understand your niche."],
+      keystone: ["Blue-chips anchor through volatility.", "Your core positions are battle-tested.", "Quality compounds over time."],
+      pathbreaker: ["Concentration creates outsized wins.", "You're positioned for asymmetric upside.", "Conviction is your competitive edge."],
+      detective: ["Early positioning pays off.", "You avoid crowded trades.", "Patience reveals hidden value."]
+    };
+    
+    const tradeOffByArchetype: Record<string, string> = {
+      sentinel: "liquidity — sealed can be slower to exit if you ever need cash quickly.",
+      politician: "you may never feel fully committed to one idea, which can limit maximum upside.",
+      purist: "volatility — when markets move against you, conviction cuts both ways.",
+      hustler: "margin erosion and burnout. Activity doesn't always equal progress.",
+      archivist: "opportunity cost — vintage moves slowly, and you may miss newer cycles.",
+      wayfinder: "volatility exposure — attention fades, and newer sets can correct sharply.",
+      cartographer: "concentration risk — depth in one area means exposure to that area's fate.",
+      keystone: "less experimentation — you may miss emerging opportunities outside your pillars.",
+      pathbreaker: "drawdowns before payoff — being early often means being uncomfortable first.",
+      detective: "long waits for recognition — your thesis may take years to play out."
+    };
+    
+    const gentleNudges: Record<string, string> = {
+      sentinel: "If you ever want more flexibility, slabs can act as pressure valves — not replacements.",
+      politician: "When you do feel strongly about a position, letting it grow slightly larger can be rewarding.",
+      purist: "Consider grading your best raw pieces to lock in their value.",
+      hustler: "Build a small 'anchor' position you never trade. It'll keep you grounded.",
+      archivist: "A small allocation to newer sets keeps you connected to the current market.",
+      wayfinder: "Consider holding 1-2 positions longer than usual — some trades become investments.",
+      cartographer: "If concentration feels heavy, one or two positions outside your focus can reduce risk.",
+      keystone: "Every few months, explore something new. Your pillars are strong enough.",
+      pathbreaker: "Size matters — make sure you can survive being wrong longer than expected.",
+      detective: "When one of your ideas starts gaining attention, don't be afraid to let it run — you earned it."
+    };
+    
+    const traits = personalityTraits[archetypeKey] || [];
+    const strengths = strengthsByArchetype[archetypeKey] || [];
+    const tradeOff = tradeOffByArchetype[archetypeKey] || '';
+    const nudge = gentleNudges[archetypeKey] || '';
+    
+    return `
+      <div class="collector-profile">
+        <div style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Your Collector Profile Is:</div>
+        <div class="collector-type">${archetype.emoji} ${archetype.name}</div>
+        <p style="color: #a78bfa; font-style: italic; margin-bottom: 8px;">${archetype.subtitle}</p>
+        <p class="collector-desc" style="font-size: 14px;">Role: ${archetype.role}</p>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">How You Collect</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+          ${archetype.howTheyCollect.map(trait => `<span style="background: rgba(139, 92, 246, 0.2); padding: 6px 12px; border-radius: 16px; font-size: 13px; color: #a78bfa;">${trait}</span>`).join('')}
+        </div>
+        
+        <div class="narrative-block">
+          <div class="narrative-title">What This Says About You</div>
+          ${archetype.whatItSays}
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px;">
+          <div style="background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
+            <div style="font-size: 12px; color: #4ade80; text-transform: uppercase; letter-spacing: 0.5px;">Core Strength</div>
+            <div style="font-size: 18px; font-weight: 600; color: #fff; margin-top: 4px;">${archetype.coreStrength}</div>
+          </div>
+          <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
+            <div style="font-size: 12px; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.5px;">Trade-Off</div>
+            <div style="font-size: 18px; font-weight: 600; color: #fff; margin-top: 4px;">${archetype.tradeOff}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">What The Data Shows</h2>
+        <div class="narrative-block">
+          <p style="margin-bottom: 12px;">You have <strong>${sealed.toFixed(0)}%</strong> sealed${sealedCount > 0 ? `, spread across ${sealedCount} products${topSealedNames ? `, including ${topSealedNames}` : ''}` : ''}.</p>
+          <p style="margin-bottom: 12px;">Your allocation leans <strong>${overUnder}</strong> your target by <strong>${diffAmount.toFixed(0)}%</strong>.</p>
+          ${dominantEraPercent > 30 ? `<p>You've concentrated most of your value in the <strong>${dominantEra}</strong> era (${dominantEraPercent.toFixed(0)}%).</p>` : ''}
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">Why Your Portfolio Looks This Way</h2>
+        <div class="narrative-block">
+          <p style="margin-bottom: 12px;">This tells me you value <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'stability' : archetypeKey === 'politician' || archetypeKey === 'hustler' ? 'flexibility' : archetypeKey === 'purist' || archetypeKey === 'pathbreaker' ? 'conviction' : 'discovery'}</strong> over <strong>${archetypeKey === 'sentinel' || archetypeKey === 'archivist' ? 'speed' : archetypeKey === 'wayfinder' || archetypeKey === 'hustler' ? 'stability' : 'short-term wins'}</strong>.</p>
+          <p>You're comfortable letting time do the work instead of forcing outcomes.</p>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">What This Says About You</h2>
+        <div class="narrative-block">
+          ${traits.map(t => `<p style="margin-bottom: 8px;">• ${t}</p>`).join('')}
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">Your Strengths</h2>
+        <div class="narrative-block">
+          ${strengths.map(s => `<p style="margin-bottom: 8px;">• ${s}</p>`).join('')}
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">The Trade-Off</h2>
+        <div class="narrative-block">
+          <p style="margin-bottom: 12px;">The downside of this style is <strong>${tradeOff}</strong></p>
+          <p style="color: #94a3b8; font-style: italic;">This doesn't mean it's wrong — it just means you've chosen a specific game.</p>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2 class="section-title">A Gentle Nudge</h2>
+        <div class="narrative-block">
+          <p style="color: #a78bfa;">${nudge}</p>
+          <p style="margin-top: 12px; color: #94a3b8; font-style: italic;">You don't need to change — just be aware.</p>
+        </div>
+      </div>
+    `;
   };
 
   const getNarrativeContent = () => {
@@ -324,26 +588,18 @@ ${Math.abs(raw - allocationTarget.rawCards) > 10 ? `• You're ${raw > allocatio
 The trade-off? You may slightly cap upside if one category outperforms everything else.<br><br>
 <strong>Note:</strong> Your action plan changes based on your target allocation. Conservative collectors get different advice than aggressive ones — the simulator on the Rebalance page lets you experiment.`;
 
-    // Closing narrative - SPECIFIC to their portfolio
-    let closingNarrative = "";
-    if (topGainers.length > 0 && topGainers[0].gainPercent > 100) {
-      const closingHits = topHits.slice(0, 2).map(m => escapeHtml(m.item.productName)).join(', ');
-      closingNarrative = `<strong>Your ${topHits.length} position${topHits.length > 1 ? 's' : ''} with 100%+ gains (${closingHits}) ${topHits.length > 1 ? 'are' : 'is'} the highlight.</strong><br><br>
-Consider taking some profits — at least enough to recoup your initial investment. Then you're playing with house money.<br><br>
-${concentration && concentration.top1Percent > 20 ? `Watch your concentration in <strong>${top1Name}</strong>. Trimming here could reduce risk without abandoning your thesis.` : `Your diversification across ${items.length} positions is solid.`}<br><br>
-You know what you believe in. You're not chasing noise. The next level isn't changing your thesis — it's refining execution.`;
-    } else if (topLosers.length > 0 && topLosers[0].gainPercent < -20) {
-      const closingLosers = topLosers.slice(0, 2).map(i => escapeHtml(i.productName)).join(' and ');
-      closingNarrative = `<strong>Let's address the elephant:</strong> ${closingLosers} ${topLosers.length > 1 ? 'are' : 'is'} in significant drawdown.<br><br>
-Decide if your thesis still holds. If yes, this could be accumulation territory. If not, consider tax-loss harvesting before year-end.<br><br>
-${items.filter(i => i.gainPercent > 0).length > 0 ? `On the bright side, ${items.filter(i => i.gainPercent > 0).length} of your ${items.length} positions are in profit. Focus on what's working.` : ''}<br><br>
-Markets cycle. Stay patient with fundamentally sound holdings.`;
-    } else {
-      closingNarrative = `Your $${(summary?.totalMarketValue || 0).toLocaleString()} portfolio across ${items.length} holdings shows thoughtful construction.<br><br>
-${biggestPosition ? `<strong>${biggestPosition}</strong> at $${biggestPositionValue.toLocaleString()} anchors your collection.` : ''}<br><br>
-${summary && summary.unrealizedPLPercent >= 0 ? `You're up ${summary.unrealizedPLPercent.toFixed(1)}% overall — not explosive, but steady progress.` : 'You\'re in drawdown, but that\'s temporary if your thesis is sound.'}<br><br>
-Keep monitoring, stay patient, and remember: the best returns in Pokémon come from holding quality products through market noise.`;
-    }
+    // Closing narrative - Summary with hopeful note
+    const archetypeForClosing = getCollectorArchetype();
+    const archetypeInfo = archetypeForClosing ? archetypeData[archetypeForClosing] : null;
+    
+    const closingNarrative = `<strong>Summary of Your Portfolio</strong><br><br>
+${archetypeInfo ? `<strong>Your Strength:</strong> ${archetypeInfo.coreStrength}. ${archetypeInfo.whatItSays.split('.')[0]}.<br><br>` : ''}
+${archetypeInfo ? `<strong>Your Trade-off:</strong> ${archetypeInfo.tradeOff}. This isn't a flaw — it's the cost of your chosen strategy.<br><br>` : ''}
+${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInProfitPercent.toFixed(0)}% of your holdings in profit, you're doing something right. ` : ''}${items.length >= 5 ? `Your ${items.length} positions show intentional building, not random accumulation.` : ''}<br><br>
+<strong style="color: #4ade80;">Keep going.</strong> You've built something worth protecting. Continue doing what you're doing — the conviction that got you here will carry you forward.<br><br>
+<strong style="color: #fbbf24;">Stay aware of the risks.</strong> ${concentration && concentration.top1Percent > 20 ? `Your concentration in ${top1Name} deserves monitoring.` : 'Market cycles test patience.'} But awareness isn't anxiety — it's preparation.<br><br>
+<strong style="color: #a78bfa;">And finally: collect what you love.</strong> The collectors who hold through volatility are the ones who genuinely care about what they own. Conviction comes from connection. If you love your cards, you'll have the patience to let them appreciate.<br><br>
+<em style="color: #94a3b8;">This isn't just a portfolio — it's a reflection of how you think about value, time, and what matters to you. Trust that.</em>`;
 
     return {
       collectorNarrative,
@@ -451,11 +707,12 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
       .join("");
   };
 
-  const collectorProfile = getCollectorType();
   const topHits = milestones.slice(0, 5);
   const strengthInsights = insights.filter((i) => i.priority === "low");
   const riskInsights = insights.filter((i) => i.priority === "high" || i.priority === "medium");
   const narratives = getNarrativeContent();
+  const archetypeKey = getCollectorArchetype();
+  const archetype = archetypeKey ? archetypeData[archetypeKey] : null;
 
   const totalGain = summary?.unrealizedPL || 0;
   const totalGainPercent = summary?.unrealizedPLPercent || 0;
@@ -466,6 +723,10 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
   // Calculate rebalancing recommendations based on monthly budget
   const generateRebalancingPlan = () => {
     if (!allocation) return '';
+    
+    const sealed = allocation.sealed.percent;
+    const slabs = allocation.slabs.percent;
+    const raw = allocation.rawCards.percent;
     
     const categories = [
       { key: 'sealed', label: 'Sealed Products', current: allocation.sealed, target: allocationTarget.sealed },
@@ -498,6 +759,29 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
     }
 
     const maxMonths = Math.max(...rebalanceItems.map(cat => cat.monthsNeeded));
+    
+    // Generate plain English summary
+    const plainEnglishAdvice: string[] = [];
+    
+    rebalanceItems.forEach(cat => {
+      const shareAmount = Math.round(cat.monthlyShare);
+      if (cat.key === 'slabs' && shareAmount > 0) {
+        plainEnglishAdvice.push(`<strong>Invest $${shareAmount.toLocaleString()}/month in graded cards.</strong> PSA 10s are the gold standard — they have proven liquidity and strong appreciation. PSA 9s are okay too, especially for vintage where 10s are rare. ${slabs > allocationTarget.slabs ? "You're already overweight here, so be selective." : "Focus on iconic Pokémon and cards with strong market history."}`);
+      }
+      if (cat.key === 'rawCards' && shareAmount > 0) {
+        plainEnglishAdvice.push(`<strong>Invest $${shareAmount.toLocaleString()}/month in raw cards.</strong> Look for Near Mint (NM) or Mint (M) condition copies. Ideally, find "gradeable" copies so you have the option of submitting to PSA later. Raw cards give you flexibility — you can hold as-is or grade when the time is right.`);
+      }
+      if (cat.key === 'sealed' && shareAmount > 0) {
+        plainEnglishAdvice.push(`<strong>Invest $${shareAmount.toLocaleString()}/month in sealed products.</strong> Prioritize booster boxes (the gold standard) and Pokemon Center ETBs (premium exclusives). Sealed products appreciate through scarcity — they can never be reprinted.`);
+      }
+    });
+    
+    // Add context about what they're already overweight on
+    const overweightCategories = categories.filter(cat => cat.current.percent > cat.target);
+    if (overweightCategories.length > 0) {
+      const overweightNames = overweightCategories.map(c => c.label.toLowerCase()).join(' and ');
+      plainEnglishAdvice.push(`<em style="color: #94a3b8;">Note: You're already overweight on ${overweightNames}, so no additional investment needed there right now.</em>`);
+    }
 
     return `
       <div class="target-allocation-card">
@@ -517,6 +801,16 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
           </p>
           <p style="color: #94a3b8; font-size: 12px; margin-top: 4px;">
             At $${monthlyBudget.toLocaleString()}/month contribution rate
+          </p>
+        </div>
+      </div>
+      
+      <div style="margin-top: 24px;">
+        <div class="narrative-title">What This Means In Plain English</div>
+        <div class="narrative-block" style="margin-top: 12px;">
+          ${plainEnglishAdvice.map(advice => `<p style="margin-bottom: 16px;">${advice}</p>`).join('')}
+          <p style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(139, 92, 246, 0.2); color: #a78bfa;">
+            <strong>Remember:</strong> Graded cards give you exposure to cards whose value has been "locked in" by third-party authentication. This removes condition uncertainty and makes future selling easier.
           </p>
         </div>
       </div>
@@ -1046,23 +1340,8 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
       <p class="date">Generated on ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
     </header>
     
-    <!-- Collector Profile -->
-    <div class="collector-profile">
-      <div class="collector-type">${collectorProfile.type}</div>
-      <p class="collector-desc">${collectorProfile.description}</p>
-    </div>
-    
-    <!-- What Your Collection Says About You -->
-    <div class="section">
-      <h2 class="section-title">What Your Collection Says About You</h2>
-      <div class="narrative-block">
-        ${narratives.collectorNarrative}
-      </div>
-      <div class="narrative-block" style="margin-top: 16px;">
-        <div class="narrative-title">Your Collector Psychology</div>
-        ${collectorProfile.extended || narratives.collectorNarrative}
-      </div>
-    </div>
+    <!-- Collector Profile Section (Archetype) -->
+    ${generateArchetypeSection()}
     
     <!-- Portfolio Overview -->
     <div class="section">
@@ -1181,9 +1460,9 @@ Keep monitoring, stay patient, and remember: the best returns in Pokémon come f
       </div>
     </div>
     
-    <!-- Risks & Considerations -->
+    <!-- Risks & Tradeoffs -->
     <div class="section">
-      <h2 class="section-title">Risks & Considerations</h2>
+      <h2 class="section-title">Risks & Tradeoffs</h2>
       ${riskInsights.length > 0 ? riskInsights.slice(0, 4).map(insight => `
         <div class="insight-item risk">
           <div class="insight-title">${insight.type.charAt(0).toUpperCase() + insight.type.slice(1)}</div>
