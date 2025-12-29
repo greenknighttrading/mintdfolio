@@ -426,7 +426,7 @@ export function buildPortfolioReportHtml({
       { key: 'slabs', label: 'Graded Cards', current: allocation.slabs, target: allocationTarget.slabs,
         advice: 'PSA 10s are the gold standard for graded investments — their value is locked in and verified. PSA 9s offer solid value at lower entry points and are perfectly acceptable. Graded cards give you exposure to cards whose value has been authenticated and protected.' },
       { key: 'rawCards', label: 'Raw Cards', current: allocation.rawCards, target: allocationTarget.rawCards,
-        advice: 'Look for cards with grading potential. The best raw pickups are those that could become PSA 10s — your profit margin expands significantly when you grade a winner.' },
+        advice: 'Look for cards with grading potential. The best raw pickups are those that could become PSA 10s — your profit margin expands significantly when you grade a winner. Important: Raw cards should ideally be in near mint condition to maximize their value and grading potential.' },
     ];
 
     const totalUnderweight = categories.reduce((sum, cat) => {
@@ -593,17 +593,7 @@ export function buildPortfolioReportHtml({
       font-weight: 600;
       color: #a78bfa;
       margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .section-title::before {
-      content: '';
-      width: 4px;
-      height: 20px;
-      background: linear-gradient(180deg, #a78bfa, #818cf8);
-      border-radius: 2px;
+      text-align: center;
     }
     
     /* Portfolio Snapshot */
@@ -1011,6 +1001,14 @@ export function buildPortfolioReportHtml({
     <!-- 1. Portfolio Snapshot -->
     <div class="section">
       <h2 class="section-title">Portfolio Snapshot</h2>
+      <div class="health-score-display">
+        <div class="health-circle ${healthScore >= 75 ? 'good' : healthScore >= 65 ? 'moderate' : 'low'}" style="--score: ${healthScore}">
+          ${healthScore}
+        </div>
+        <div class="health-explanation">
+          ${getHealthScoreExplanation()}
+        </div>
+      </div>
       <div class="snapshot-grid">
         <div class="snapshot-card">
           <div class="snapshot-value">$${totalValue.toLocaleString()}</div>
@@ -1025,14 +1023,6 @@ export function buildPortfolioReportHtml({
           <div class="snapshot-label">Health Score</div>
         </div>
       </div>
-      <div class="health-score-display">
-        <div class="health-circle ${healthScore >= 75 ? 'good' : healthScore >= 65 ? 'moderate' : 'low'}" style="--score: ${healthScore}">
-          ${healthScore}
-        </div>
-        <div class="health-explanation">
-          ${getHealthScoreExplanation()}
-        </div>
-      </div>
     </div>
     
     <!-- 2. Verdict -->
@@ -1045,8 +1035,8 @@ export function buildPortfolioReportHtml({
     
     <!-- 3. Archetype Identity -->
     <div class="archetype-header">
-      <div style="font-size: 13px; color: #8b5cf6; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">What your collection says about you</div>
-      <div class="archetype-name">You're ${archetype.name}</div>
+      <div style="font-size: 13px; color: #8b5cf6; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">Your collector profile is</div>
+      <div class="archetype-name">${archetype.name}</div>
       <div class="archetype-subtitle">${archetype.subtitle}</div>
     </div>
     
