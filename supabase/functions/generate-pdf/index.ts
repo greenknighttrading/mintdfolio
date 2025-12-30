@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const MAX_HTML_SIZE = 5 * 1024 * 1024; // 5MB limit
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -12,12 +15,48 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("Missing authorization header");
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      console.error("Authentication failed:", authError?.message);
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Authenticated user: ${user.id}`);
+
     const { html } = await req.json();
 
     if (!html) {
       return new Response(
         JSON.stringify({ error: "Missing HTML content" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate HTML size
+    if (html.length > MAX_HTML_SIZE) {
+      console.error(`HTML content too large: ${html.length} bytes`);
+      return new Response(
+        JSON.stringify({ error: "HTML content too large (max 5MB)" }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -35,8 +74,6 @@ serve(async (req) => {
     const fullHtml = buildFullHtml(html);
 
     // Use Browserless /function endpoint - allows full puppeteer control
-    // IMPORTANT: All Puppeteer methods must be called inside the function code,
-    // NOT as JSON body parameters (which causes validation errors)
     const functionCode = `
 export default async function ({ page, context }) {
   try {
@@ -112,14 +149,14 @@ export default async function ({ page, context }) {
       );
     }
 
-    console.log("PDF generated successfully");
+    console.log(`PDF generated successfully for user: ${user.id}`);
     const pdfBuffer = await response.arrayBuffer();
 
     return new Response(pdfBuffer, {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="mintdfolio-report-${new Date().toISOString().split("T")[0]}.pdf"`,
+        "Content-Disposition": `attachment; filename="pokeiq-report-${new Date().toISOString().split("T")[0]}.pdf"`,
       },
     });
   } catch (error: unknown) {
