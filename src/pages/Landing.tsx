@@ -64,7 +64,7 @@ const screenshots = [
     title: 'Collector Profile Result', 
     caption: 'Discover your unique collector personality and what it says about your approach.',
     image: screenshotCollectorProfile,
-    objectPosition: 'bottom'
+    objectPosition: 'center 20%'
   },
   { 
     title: 'Portfolio Health Score', 
