@@ -93,7 +93,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="relative py-24 px-6 text-center">
         <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-2">
             <img 
               src={pokeiqLogo} 
               alt="PokeIQ Logo" 
