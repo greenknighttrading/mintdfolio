@@ -195,7 +195,17 @@ export function findProfitMilestones(items: PortfolioItem[]): ProfitMilestone[] 
 export function calculateDaysSinceLastAction(items: PortfolioItem[]): number {
   const validDates = items
     .filter(item => item.dateAdded)
-    .map(item => item.dateAdded!.getTime());
+    .map(item => {
+      const date = item.dateAdded;
+      // Handle both Date objects and string dates (from JSON)
+      if (date instanceof Date) {
+        return date.getTime();
+      } else if (typeof date === 'string') {
+        return new Date(date).getTime();
+      }
+      return null;
+    })
+    .filter((time): time is number => time !== null && !isNaN(time));
 
   if (validDates.length === 0) return -1;
 
