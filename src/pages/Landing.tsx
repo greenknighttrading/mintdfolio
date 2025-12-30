@@ -7,7 +7,7 @@ import { Shield, Vote, Flame, Briefcase, ScrollText, ChevronRight, Target, PieCh
 import screenshotPortfolio from '@/assets/screenshot-portfolio.png';
 import screenshotHealth from '@/assets/screenshot-health.png';
 import screenshotRebalance from '@/assets/screenshot-rebalance.png';
-import screenshotReportHealth from '@/assets/screenshot-report-health.png';
+
 import screenshotCollectorProfile from '@/assets/screenshot-collector-profile.png';
 import pokeiqLogo from '@/assets/pokeiq-logo.png';
 
@@ -63,27 +63,27 @@ const screenshots = [
   { 
     title: 'Collector Profile Result', 
     caption: 'Discover your unique collector personality and what it says about your approach.',
-    image: screenshotCollectorProfile
+    image: screenshotCollectorProfile,
+    objectPosition: 'center'
   },
   { 
     title: 'Portfolio Health Score', 
     caption: 'See your overall portfolio health with breakdowns across key metrics.',
-    image: screenshotHealth
+    image: screenshotHealth,
+    objectPosition: 'center',
+    objectFit: 'contain' as const
   },
   { 
     title: 'Portfolio Summary & Allocation', 
     caption: 'Get a comprehensive view of your holdings across asset types and eras.',
-    image: screenshotPortfolio
+    image: screenshotPortfolio,
+    objectPosition: 'center'
   },
   { 
     title: 'Rebalance Calculator', 
     caption: 'Plan your purchases with suggested allocations to reach your target balance.',
-    image: screenshotRebalance
-  },
-  { 
-    title: 'Detailed Report Insights', 
-    caption: 'Receive actionable insights with charts and written recommendations.',
-    image: screenshotReportHealth
+    image: screenshotRebalance,
+    objectPosition: 'top'
   }
 ];
 
@@ -216,11 +216,12 @@ export default function Landing() {
           <div className="grid md:grid-cols-2 gap-8">
             {screenshots.map((screen, i) => (
               <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden">
-                <div className="h-48 overflow-hidden">
+                <div className={`${screen.objectFit === 'contain' ? 'h-56 bg-card' : 'h-48'} overflow-hidden`}>
                   <img 
                     src={screen.image} 
                     alt={screen.title}
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full ${screen.objectFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                    style={{ objectPosition: screen.objectPosition || 'center' }}
                   />
                 </div>
                 <div className="p-4">
