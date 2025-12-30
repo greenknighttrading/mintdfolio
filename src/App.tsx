@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PortfolioProvider } from "@/contexts/PortfolioContext";
 import { AppLayout } from "@/components/layout/AppLayout";
+import Landing from "./pages/Landing";
+import Auth from "./pages/Auth";
 import Index from "./pages/Index";
 import Insights from "./pages/Insights";
 import Winners from "./pages/Winners";
@@ -21,12 +23,16 @@ const queryClient = new QueryClient();
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public pages */}
+      <Route path="/" element={<Landing />} />
+      <Route path="/auth" element={<Auth />} />
+      
       {/* Standalone report pages - no layout */}
       <Route path="/report/generated" element={<GeneratedReport />} />
       <Route path="/report/print" element={<PrintReport />} />
       
       {/* All other pages with AppLayout */}
-      <Route path="/" element={<AppLayout><Index /></AppLayout>} />
+      <Route path="/home" element={<AppLayout><Index /></AppLayout>} />
       <Route path="/insights" element={<AppLayout><Insights /></AppLayout>} />
       <Route path="/winners" element={<AppLayout><Winners /></AppLayout>} />
       <Route path="/rebalance" element={<AppLayout><Rebalance /></AppLayout>} />
