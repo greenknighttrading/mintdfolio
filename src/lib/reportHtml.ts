@@ -151,8 +151,8 @@ export function buildPortfolioReportHtml({
     sentinel: {
       emoji: '🛡️',
       name: 'The Sentinel',
-      subtitle: 'A patient guardian.',
-      role: 'Guardian of time and scarcity',
+      subtitle: 'A patient guardian of value, confident that time is ultimately the edge.',
+      role: '',
       howTheyCollect: ['Sealed-heavy', 'Broad spread across products', 'Low turnover, long holds'],
       whatItSays: "You're calm, patient, and unreactive. You don't feel pressure to constantly act, and you trust that time is your strongest ally. While others chase momentum, you stand watch. You believe the best moves are often the ones you don't make.",
       coreStrength: 'Discipline',
@@ -313,7 +313,7 @@ export function buildPortfolioReportHtml({
     };
     
     const gentleNudges: Record<string, string> = {
-      sentinel: "If you ever want more flexibility, slabs can act as pressure valves — not replacements.",
+      sentinel: "",
       politician: "When you do feel strongly about a position, letting it grow slightly larger can be rewarding.",
       purist: "Consider grading your best raw pieces to lock in their value.",
       hustler: "Build a small 'anchor' position you never trade. It'll keep you grounded.",
@@ -337,13 +337,13 @@ export function buildPortfolioReportHtml({
     
     const strengthsParagraph = `${strengths.join(' ')} The downside of this style is <strong>${tradeOff}</strong> This doesn't mean it's wrong — it just means you've chosen a specific game.`;
     
-    const nudgeParagraph = `${nudge} You don't need to change — just be aware.`;
+    const nudgeParagraph = nudge ? nudge : '';
 
     return `
       <div class="collector-profile">
         <div style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Your Collector Profile Is:</div>
         <div class="collector-type">${archetype.emoji} ${archetype.name}</div>
-        <p style="color: #a78bfa; font-style: italic; margin-bottom: 16px;">${archetype.subtitle} ${archetype.role}.</p>
+        <p style="color: #a78bfa; font-style: italic; margin-bottom: 16px;">${archetype.subtitle}${archetype.role ? ' ' + archetype.role + '.' : ''}</p>
         
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; justify-content: center;">
           ${archetype.howTheyCollect.map(trait => `<span style="background: rgba(139, 92, 246, 0.2); padding: 6px 12px; border-radius: 16px; font-size: 13px; color: #a78bfa;">${trait}</span>`).join('')}
@@ -430,7 +430,7 @@ export function buildPortfolioReportHtml({
   };
   
   const gentleNudges: Record<string, string> = {
-    sentinel: "If you ever want more flexibility, slabs can act as pressure valves — not replacements.",
+    sentinel: "",
     politician: "When you do feel strongly about a position, letting it grow slightly larger can be rewarding.",
     purist: "Consider grading your best raw pieces to lock in their value.",
     hustler: "Build a small 'anchor' position you never trade. It'll keep you grounded.",

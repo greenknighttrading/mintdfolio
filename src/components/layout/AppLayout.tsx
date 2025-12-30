@@ -14,13 +14,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePortfolio } from '@/contexts/PortfolioContext';
+import { CreditsModal } from '@/components/upload/CreditsModal';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 const navigation = [
-  { name: 'Overview', href: '/', icon: LayoutDashboard },
+  { name: 'Overview', href: '/home', icon: LayoutDashboard },
   { name: 'Insight Feed', href: '/insights', icon: Lightbulb },
   { name: 'Top Performers', href: '/winners', icon: Trophy },
   { name: 'Asset Type', href: '/rebalance', icon: Scale },
@@ -30,11 +31,15 @@ const navigation = [
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [creditsModalOpen, setCreditsModalOpen] = useState(false);
   const location = useLocation();
   const { isDataLoaded, summary, validation } = usePortfolio();
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Credits Modal */}
+      <CreditsModal open={creditsModalOpen} onOpenChange={setCreditsModalOpen} />
+
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 border-r border-border bg-sidebar">
         <div className="flex flex-col flex-1 overflow-y-auto">
@@ -87,7 +92,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   to={item.href}
                   className={cn(
                     isActive ? 'nav-link-active' : 'nav-link',
-                    !isDataLoaded && item.href !== '/' && 'opacity-50 pointer-events-none'
+                    !isDataLoaded && item.href !== '/home' && 'opacity-50 pointer-events-none'
                   )}
                 >
                   <item.icon className="w-5 h-5" />
@@ -102,11 +107,11 @@ export function AppLayout({ children }: AppLayoutProps) {
             <button
               onClick={() => {
                 if (isDataLoaded) {
-                  // Show credits popup for existing users
-                  alert("You're Out of Upload Credits\n\nYou're currently on the Free plan, which includes a limited number of uploads.\n\nUpgrade to Pro for more uploads — more features coming soon.");
+                  // Show credits modal for existing users
+                  setCreditsModalOpen(true);
                 } else {
                   // Navigate to home for new uploads
-                  window.location.href = '/';
+                  window.location.href = '/home';
                 }
               }}
               className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg bg-secondary/50 text-secondary-foreground hover:bg-secondary transition-colors"
@@ -149,7 +154,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     isActive ? 'nav-link-active' : 'nav-link',
-                    !isDataLoaded && item.href !== '/' && 'opacity-50 pointer-events-none'
+                    !isDataLoaded && item.href !== '/home' && 'opacity-50 pointer-events-none'
                   )}
                 >
                   <item.icon className="w-5 h-5" />
