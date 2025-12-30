@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Shield, Vote, Flame, Briefcase, ScrollText, ChevronRight, Target, PieChart, TrendingUp, AlertTriangle } from 'lucide-react';
 
 // Import screenshots
-import screenshotCollectorRole from '@/assets/screenshot-collector-role.png';
-import screenshotHealthScore from '@/assets/screenshot-health-score.png';
-import screenshotConcentration from '@/assets/screenshot-concentration.png';
-import screenshotReport from '@/assets/screenshot-report.png';
-import pokeiqIcon from '@/assets/pokeiq-icon.png';
+import screenshotPortfolio from '@/assets/screenshot-portfolio.png';
+import screenshotHealth from '@/assets/screenshot-health.png';
+import screenshotRebalance from '@/assets/screenshot-rebalance.png';
+import screenshotReportHealth from '@/assets/screenshot-report-health.png';
+import screenshotCollectorProfile from '@/assets/screenshot-collector-profile.png';
+import pokeiqLogo from '@/assets/pokeiq-logo.png';
 
 const collectorRoles = [
   {
@@ -60,24 +61,29 @@ const collectorRoles = [
 
 const screenshots = [
   { 
-    title: 'Collector Role Result', 
+    title: 'Collector Profile Result', 
     caption: 'Discover your unique collector personality and what it says about your approach.',
-    image: screenshotCollectorRole
+    image: screenshotCollectorProfile
   },
   { 
     title: 'Portfolio Health Score', 
-    caption: 'Get a comprehensive breakdown of your allocation across asset types and eras.',
-    image: screenshotHealthScore
+    caption: 'See your overall portfolio health with breakdowns across key metrics.',
+    image: screenshotHealth
   },
   { 
-    title: 'Concentration & Risk Analysis', 
-    caption: 'Identify where your portfolio is over-concentrated and potential blind spots.',
-    image: screenshotConcentration
+    title: 'Portfolio Summary & Allocation', 
+    caption: 'Get a comprehensive view of your holdings across asset types and eras.',
+    image: screenshotPortfolio
   },
   { 
-    title: 'Final Portfolio Report', 
+    title: 'Rebalance Calculator', 
+    caption: 'Plan your purchases with suggested allocations to reach your target balance.',
+    image: screenshotRebalance
+  },
+  { 
+    title: 'Detailed Report Insights', 
     caption: 'Receive actionable insights with charts and written recommendations.',
-    image: screenshotReport
+    image: screenshotReportHealth
   }
 ];
 
@@ -89,7 +95,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex justify-center mb-6">
             <img 
-              src={pokeiqIcon} 
+              src={pokeiqLogo} 
               alt="PokeIQ Logo" 
               className="w-24 h-24 rounded-2xl shadow-lg"
             />
