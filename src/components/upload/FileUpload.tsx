@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle2, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePortfolio } from '@/contexts/PortfolioContext';
+import { useToast } from '@/hooks/use-toast';
 import {
   Tooltip,
   TooltipContent,
@@ -12,10 +13,23 @@ export function FileUpload() {
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
   const { uploadData, validation, detectedColumns } = usePortfolio();
+  const { toast } = useToast();
 
   const handleFile = useCallback(async (file: File) => {
-    if (!file.name.endsWith('.csv')) {
+    setFileError(null);
+    
+    // Check file type
+    const isCSV = file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv';
+    if (!isCSV) {
+      const errorMsg = `Invalid file type: "${file.name}". Please upload a CSV file.`;
+      setFileError(errorMsg);
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a CSV file exported from Collectr.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -25,12 +39,22 @@ export function FileUpload() {
     try {
       const content = await file.text();
       uploadData(content);
+      toast({
+        title: "File uploaded",
+        description: "Processing your portfolio data...",
+      });
     } catch (error) {
       console.error('Error reading file:', error);
+      setFileError('Failed to read file. Please try again.');
+      toast({
+        title: "Upload failed",
+        description: "Failed to read file. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }
-  }, [uploadData]);
+  }, [uploadData, toast]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -116,6 +140,14 @@ export function FileUpload() {
           )}
         </div>
       </div>
+
+      {/* File Type Error */}
+      {fileError && (
+        <div className="mt-4 flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 animate-fade-in">
+          <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-destructive">{fileError}</p>
+        </div>
+      )}
 
       {/* Validation Results */}
       {validation && (
