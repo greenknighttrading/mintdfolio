@@ -48,6 +48,7 @@ interface PortfolioContextType {
   validation: ValidationResult | null;
   detectedColumns: ColumnMapping | null;
   isDataLoaded: boolean;
+  hasUploadedBefore: boolean;
 
   // Metrics
   summary: PortfolioSummary | null;
@@ -98,7 +99,9 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [authInitialized, setAuthInitialized] = useState(false);
 
-  // Initialize anonymous authentication
+  const [hasUploadedBefore, setHasUploadedBefore] = useState(false);
+
+  // Initialize authentication and load existing portfolio
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -107,14 +110,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           setSessionId(session.user.id);
-        } else {
-          // Sign in anonymously if no session exists
-          const { data, error } = await supabase.auth.signInAnonymously();
-          if (error) {
-            console.error('Anonymous auth failed:', error);
-          } else if (data.user) {
-            setSessionId(data.user.id);
-          }
+          // Load existing portfolio for this user
+          await loadExistingPortfolio(session.user.id);
         }
       } catch (error) {
         console.error('Auth initialization failed:', error);
@@ -127,8 +124,17 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setSessionId(session.user.id);
+        // Defer loading portfolio to avoid deadlock
+        if (event === 'SIGNED_IN') {
+          setTimeout(() => {
+            loadExistingPortfolio(session.user.id);
+          }, 0);
+        }
       } else {
         setSessionId(null);
+        // Clear data on logout
+        setItems([]);
+        setHasUploadedBefore(false);
       }
     });
 
@@ -136,6 +142,34 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Load existing portfolio from database
+  const loadExistingPortfolio = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('portfolios')
+        .select('*')
+        .eq('session_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (error) {
+        console.error('Failed to load portfolio:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        const portfolio = data[0];
+        const loadedItems = portfolio.items as unknown as PortfolioItem[];
+        if (loadedItems && loadedItems.length > 0) {
+          setItems(loadedItems);
+          setHasUploadedBefore(true);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load portfolio:', error);
+    }
+  };
 
   const isDataLoaded = items.length > 0;
 
@@ -257,6 +291,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setValidation(result.validation);
     setDetectedColumns(result.detectedColumns);
     setDismissedInsights(new Set());
+    setHasUploadedBefore(true);
   }, []);
 
   const clearData = useCallback(() => {
@@ -293,6 +328,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     validation,
     detectedColumns,
     isDataLoaded,
+    hasUploadedBefore,
     summary,
     allocation,
     eraAllocation,

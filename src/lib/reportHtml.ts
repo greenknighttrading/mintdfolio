@@ -1678,7 +1678,7 @@ ${summary && summary.holdingsInProfitPercent > 50 ? `With ${summary.holdingsInPr
     
     <!-- Feedback -->
     <div style="text-align: center; margin: 32px 0 16px 0;">
-      <p style="color: #94a3b8; font-size: 14px;">How did we do? <a href="https://forms.gle/your-feedback-form" target="_blank" rel="noopener noreferrer" style="color: #a78bfa; text-decoration: underline;">Please submit feedback here</a></p>
+      <p style="color: #94a3b8; font-size: 14px;">How did we do? <a href="https://docs.google.com/forms/d/e/1FAIpQLSfBu6m-D3xSrRyyKpOwqMRJ6WtGuE91IVK2KN9AOc3BJc5ISQ/viewform?usp=header" target="_blank" rel="noopener noreferrer" style="color: #a78bfa; text-decoration: underline;">Please submit feedback here</a></p>
     </div>
     
     <footer class="footer">

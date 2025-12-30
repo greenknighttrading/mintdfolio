@@ -87,7 +87,7 @@ export function AllocationDonut() {
       </div>
 
       {/* Preset Selector */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {presets.map((preset) => (
           <button
             key={preset.key}

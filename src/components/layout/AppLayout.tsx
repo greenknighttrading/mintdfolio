@@ -33,7 +33,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
   const location = useLocation();
-  const { isDataLoaded, summary, validation } = usePortfolio();
+  const { isDataLoaded, hasUploadedBefore, summary, validation } = usePortfolio();
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -106,8 +106,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="px-4 py-4 border-t border-border">
             <button
               onClick={() => {
-                if (isDataLoaded) {
-                  // Show credits modal for existing users
+                if (hasUploadedBefore) {
+                  // Show credits modal for users who have already uploaded
                   setCreditsModalOpen(true);
                 } else {
                   // Navigate to home for new uploads
@@ -118,7 +118,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             >
               <Upload className="w-4 h-4" />
               <span className="text-sm font-medium">
-                {isDataLoaded ? 'Upload New Data' : 'Upload Portfolio'}
+                {hasUploadedBefore ? 'Upload New Data' : 'Upload Portfolio'}
               </span>
             </button>
           </div>
