@@ -162,7 +162,12 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         const portfolio = data[0];
         const loadedItems = portfolio.items as unknown as PortfolioItem[];
         if (loadedItems && loadedItems.length > 0) {
-          setItems(loadedItems);
+          // Convert dateAdded strings back to Date objects
+          const itemsWithDates = loadedItems.map(item => ({
+            ...item,
+            dateAdded: item.dateAdded ? new Date(item.dateAdded) : null
+          }));
+          setItems(itemsWithDates);
           setHasUploadedBefore(true);
         }
       }

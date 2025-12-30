@@ -48,7 +48,12 @@ function calculateCAGR(item: PortfolioItem): number | null {
   if (!item.dateAdded || item.totalCostBasis <= 0) return null;
 
   const now = new Date();
-  const msHeld = now.getTime() - item.dateAdded.getTime();
+  // Handle both Date objects and string dates (from JSON)
+  const dateAdded = item.dateAdded instanceof Date 
+    ? item.dateAdded 
+    : new Date(item.dateAdded);
+  
+  const msHeld = now.getTime() - dateAdded.getTime();
   const daysHeld = msHeld / (1000 * 60 * 60 * 24);
 
   // Round down to full years - need at least 1 year for CAGR
