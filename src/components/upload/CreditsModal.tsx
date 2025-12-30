@@ -14,7 +14,7 @@ interface CreditsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const FEEDBACK_FORM_URL = 'https://forms.gle/your-feedback-form-id';
+const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfBu6m-D3xSrRyyKpOwqMRJ6WtGuE91IVK2KN9AOc3BJc5ISQ/viewform?usp=header';
 
 export function CreditsModal({ open, onOpenChange }: CreditsModalProps) {
   return (

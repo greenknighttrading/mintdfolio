@@ -256,7 +256,7 @@ export default function GeneratedReport() {
         <Button 
           variant="outline" 
           size="sm"
-          onClick={() => window.location.href = '/'}
+          onClick={() => window.location.href = '/home'}
           className="flex items-center gap-2"
         >
           <ArrowLeft className="w-4 h-4" />

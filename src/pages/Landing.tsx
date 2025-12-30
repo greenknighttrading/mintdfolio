@@ -3,6 +3,13 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Shield, Vote, Flame, Briefcase, ScrollText, ChevronRight, Target, PieChart, TrendingUp, AlertTriangle } from 'lucide-react';
 
+// Import screenshots
+import screenshotCollectorRole from '@/assets/screenshot-collector-role.png';
+import screenshotHealthScore from '@/assets/screenshot-health-score.png';
+import screenshotConcentration from '@/assets/screenshot-concentration.png';
+import screenshotReport from '@/assets/screenshot-report.png';
+import pokeiqIcon from '@/assets/pokeiq-icon.png';
+
 const collectorRoles = [
   {
     emoji: '🛡️',
@@ -51,12 +58,42 @@ const collectorRoles = [
   }
 ];
 
+const screenshots = [
+  { 
+    title: 'Collector Role Result', 
+    caption: 'Discover your unique collector personality and what it says about your approach.',
+    image: screenshotCollectorRole
+  },
+  { 
+    title: 'Portfolio Health Score', 
+    caption: 'Get a comprehensive breakdown of your allocation across asset types and eras.',
+    image: screenshotHealthScore
+  },
+  { 
+    title: 'Concentration & Risk Analysis', 
+    caption: 'Identify where your portfolio is over-concentrated and potential blind spots.',
+    image: screenshotConcentration
+  },
+  { 
+    title: 'Final Portfolio Report', 
+    caption: 'Receive actionable insights with charts and written recommendations.',
+    image: screenshotReport
+  }
+];
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
       <section className="relative py-24 px-6 text-center">
         <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex justify-center mb-6">
+            <img 
+              src={pokeiqIcon} 
+              alt="PokeIQ Logo" 
+              className="w-24 h-24 rounded-2xl shadow-lg"
+            />
+          </div>
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
             PokeIQ
           </h1>
@@ -72,7 +109,7 @@ export default function Landing() {
             </Link>
             <a href="#how-it-works">
               <Button variant="outline" size="lg" className="text-lg px-8 py-6">
-                See how it works
+                See How It Works
               </Button>
             </a>
           </div>
@@ -95,7 +132,7 @@ export default function Landing() {
       <section id="how-it-works" className="py-20 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12 space-y-4">
-            <h2 className="text-3xl font-bold">Every collector has a natural role they gravitate toward.</h2>
+            <h2 className="text-3xl font-bold">Every Collector Has a Natural Role They Gravitate Toward.</h2>
             <p className="text-lg text-muted-foreground">There's no "best" role — but there is misalignment.</p>
           </div>
           
@@ -134,13 +171,13 @@ export default function Landing() {
       {/* Portfolio Intelligence */}
       <section className="py-20 px-6 bg-secondary/30">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-8">Once your role is clear, PokeIQ breaks down your portfolio and shows:</h2>
+          <h2 className="text-3xl font-bold text-center mb-8">Once Your Role Is Clear, PokeIQ Breaks Down Your Portfolio and Shows:</h2>
           <div className="grid sm:grid-cols-2 gap-6">
             {[
-              { icon: AlertTriangle, text: 'where you\'re over-concentrated' },
-              { icon: Target, text: 'where you\'re underexposed' },
-              { icon: TrendingUp, text: 'what\'s driving returns' },
-              { icon: PieChart, text: 'what\'s quietly adding risk' }
+              { icon: AlertTriangle, text: 'Where you\'re over-concentrated' },
+              { icon: Target, text: 'Where you\'re underexposed' },
+              { icon: TrendingUp, text: 'What\'s driving returns' },
+              { icon: PieChart, text: 'What\'s quietly adding risk' }
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -156,7 +193,7 @@ export default function Landing() {
       {/* Budgeting & Allocation */}
       <section className="py-20 px-6">
         <div className="max-w-3xl mx-auto text-center space-y-6">
-          <h2 className="text-3xl font-bold">Then it handles the part most collectors skip: intentional budgeting.</h2>
+          <h2 className="text-3xl font-bold">Then It Handles the Part Most Collectors Skip: Intentional Budgeting.</h2>
           <p className="text-lg text-muted-foreground leading-relaxed">
             Set allocation targets across sealed, singles, slabs, vintage, and modern.
           </p>
@@ -166,20 +203,19 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Screenshots Placeholder */}
+      {/* Screenshots */}
       <section className="py-20 px-6 bg-secondary/30">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">See PokeIQ in Action</h2>
           <div className="grid md:grid-cols-2 gap-8">
-            {[
-              { title: 'Collector Role Result', caption: 'Discover your unique collector personality and what it says about your approach.' },
-              { title: 'Portfolio Health Score', caption: 'Get a comprehensive breakdown of your allocation across asset types and eras.' },
-              { title: 'Concentration & Risk Analysis', caption: 'Identify where your portfolio is over-concentrated and potential blind spots.' },
-              { title: 'Final Portfolio Report', caption: 'Receive actionable insights with charts and written recommendations.' }
-            ].map((screen, i) => (
+            {screenshots.map((screen, i) => (
               <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden">
-                <div className="h-48 bg-gradient-to-br from-primary/20 to-secondary flex items-center justify-center">
-                  <span className="text-muted-foreground text-sm">Screenshot: {screen.title}</span>
+                <div className="h-48 overflow-hidden">
+                  <img 
+                    src={screen.image} 
+                    alt={screen.title}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div className="p-4">
                   <h3 className="font-semibold text-foreground mb-1">{screen.title}</h3>
@@ -202,7 +238,7 @@ export default function Landing() {
             </Button>
           </Link>
           <p className="text-sm text-muted-foreground">
-            Free to try. No hype. Built for collectors who want conviction.
+            Free to try. No hype or noise, just data, built for collectors who want to collect smarter not harder.
           </p>
         </div>
       </section>
